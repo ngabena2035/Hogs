@@ -1,3 +1,3 @@
 # Hogs
 Il s'agit d'un logo qui servira de jeton numérique dans de différents échanges 
-![Logo hogs](mar._24_11_2026_18_55_49.png)
+![Logo hogs](photo_2026-11-25_17-49-58.jpg)
