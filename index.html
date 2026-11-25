@@ -62,9 +62,8 @@
       margin: 10px 0;
       text-align: left;
     }
-    button, a.btn {
+    button {
       display: inline-block;
-      text-decoration: none;
       background: #f59e0b;
       color: #111318;
       border: none;
@@ -76,7 +75,7 @@
       margin-right: 6px;
       font-size: 13px;
     }
-    a.btn-secondary, button.btn-secondary {
+    button.btn-secondary {
       background: #334155;
       color: #ffffff;
     }
@@ -98,18 +97,18 @@
       <div><strong>Contrat $HG (TON) :</strong></div>
       <div id="contract-addr" class="contract-text">EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un</div>
       <button id="copy-btn" type="button" onclick="copyContract()">Copier le contrat</button>
-      <a class="btn btn-secondary" href="https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un" target="_blank">Voir sur Tonviewer</a>
+      <button class="btn-secondary" type="button" onclick="openExternalLink(null, 'https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">Voir sur Tonviewer</button>
     </div>
 
     <div class="task">
       <div><strong>1. Rejoindre la communauté HOGS</strong> (+50 pts)</div>
-      <a class="btn" href="https://t.me/COMMUNAUTE_HOGS" target="_blank" onclick="unlockTask('task1')">Ouvrir Telegram</a>
+      <button type="button" onclick="openExternalLink('task1', 'https://t.me/COMMUNAUTE_HOGS')">Ouvrir Telegram</button>
       <button id="btn-task1" type="button" onclick="claimTask('task1', 50)" disabled>Valider</button>
     </div>
 
     <div class="task">
       <div><strong>2. Découvrir $HG sur STON.fi</strong> (+100 pts)</div>
-      <a class="btn" href="https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un" target="_blank" onclick="unlockTask('task2')">Ouvrir STON.fi</a>
+      <button type="button" onclick="openExternalLink('task2', 'https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">Ouvrir STON.fi</button>
       <button id="btn-task2" type="button" onclick="claimTask('task2', 100)" disabled>Valider</button>
     </div>
 
@@ -150,14 +149,23 @@
       });
     }
 
-    function unlockTask(id) {
-      if (state.done[id]) return;
-      setTimeout(() => {
-        const btn = document.getElementById("btn-" + id);
-        if (!state.done[id]) {
-          btn.disabled = false;
-        }
-      }, 2000);
+    function openExternalLink(id, url) {
+      if (tg && url.startsWith("https://t.me/") && tg.openTelegramLink) {
+        tg.openTelegramLink(url);
+      } else if (tg && tg.openLink) {
+        tg.openLink(url);
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+
+      if (id && !state.done[id]) {
+        setTimeout(() => {
+          const btn = document.getElementById("btn-" + id);
+          if (btn && !state.done[id]) {
+            btn.disabled = false;
+          }
+        }, 2000);
+      }
     }
 
     function claimTask(id, pts) {
