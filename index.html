@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -137,39 +137,39 @@
 </head>
 <body>
   <div class="card">
-    <img src="1795313325197.jpg" alt="Logo HOGS" />
-    <div id="user-badge" class="user-badge">Membre : Invité</div>
+    <img src="1795313325197.jpg" alt="HOGS Logo" />
+    <div id="user-badge" class="user-badge">Member: Guest</div>
     <h1>HOGS ($HG)</h1>
-    <p>Minage toutes les 3 heures, tâches et communauté HOGS.</p>
+    <p>3-hour mining cycles, tasks, and HOGS community hub.</p>
 
     <div class="stats-row">
       <div class="stat-box">
-        <div>Minage</div>
-        <strong><span id="mining-balance">0</span> $</strong>
+        <div>Mining</div>
+        <strong>$<span id="mining-balance">0</span></strong>
       </div>
       <div class="stat-box">
-        <div>Tâches</div>
+        <div>Tasks</div>
         <strong><span id="points">0</span> pts</strong>
       </div>
     </div>
 
     <div class="mining-box">
-      <div><strong>Session de minage (toutes les 3 heures)</strong></div>
-      <div class="status-msg">Récompense par cycle : <strong>200 $</strong></div>
+      <div><strong>Mining Session (every 3 hours)</strong></div>
+      <div class="status-msg">Reward per cycle: <strong>$200</strong></div>
       <div id="timer-display" class="timer-display">03:00:00</div>
-      <button id="mine-btn" type="button" onclick="handleMiningButton()">Démarrer le minage (3h)</button>
-      <div id="mining-status" class="status-msg">Appuie sur le bouton pour lancer un cycle de 3 heures.</div>
+      <button id="mine-btn" type="button" onclick="handleMiningButton()">Start Mining (3h)</button>
+      <div id="mining-status" class="status-msg">Press the button to start a 3-hour mining cycle.</div>
     </div>
 
     <div class="box">
-      <div><strong>Contrat $HG (TON) :</strong></div>
+      <div><strong>$HG Contract (TON):</strong></div>
       <div id="contract-addr" class="contract-text">EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un</div>
-      <button id="copy-btn" type="button" onclick="copyContract()">Copier le contrat</button>
-      <button class="btn-secondary" type="button" onclick="openExternalLink(null, 'https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">Voir sur Tonviewer</button>
+      <button id="copy-btn" type="button" onclick="copyContract()">Copy Contract</button>
+      <button class="btn-secondary" type="button" onclick="openExternalLink(null, 'https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">View on Tonviewer</button>
       <div id="copy-status" class="status-msg"></div>
     </div>
 
-    <div class="section-title">Session Tâches & Communauté</div>
+    <div class="section-title">Tasks & Community Session</div>
     <div id="tasks-container" class="tasks-grid"></div>
   </div>
 
@@ -178,23 +178,23 @@
     const MINING_REWARD = 200;
     const TASK_PROCESS_MS = 15 * 1000;
 
-    // Pour renouveler les tâches : ajoute un nouvel objet avec un nouvel "id" unique.
+    // To renew tasks: add a new task object with a unique "id".
     const TASKS = [
       {
         id: "task1",
-        title: "Session Rejoindre : Communauté HOGS",
+        title: "Join Session: HOGS Community",
         points: 50,
-        buttonLabel: "Rejoindre Telegram",
+        buttonLabel: "Join Telegram",
         url: "https://t.me/COMMUNAUTE_HOGS",
-        hint: "Clique d'abord sur « Rejoindre Telegram » pour activer Valider."
+        hint: "Click \"Join Telegram\" first to enable Claim."
       },
       {
         id: "task2",
-        title: "Découvrir $HG sur STON.fi",
+        title: "Discover $HG on STON.fi",
         points: 100,
-        buttonLabel: "Ouvrir STON.fi",
+        buttonLabel: "Open STON.fi",
         url: "https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un",
-        hint: "Clique d'abord sur « Ouvrir STON.fi » pour activer Valider."
+        hint: "Click \"Open STON.fi\" first to enable Claim."
       }
     ];
 
@@ -208,12 +208,12 @@
 
     const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
     const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : "guest";
-    const STORAGE_KEY = `hogs_miniapp_state_v4_${userKey}`;
+    const STORAGE_KEY = `hogs_miniapp_state_v5_${userKey}`;
 
     const displayUser = tgUser
       ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
-      : "Invité";
-    document.getElementById("user-badge").textContent = `Membre : ${displayUser}`;
+      : "Guest";
+    document.getElementById("user-badge").textContent = `Member: ${displayUser}`;
 
     let state = JSON.parse(
       localStorage.getItem(STORAGE_KEY) ||
@@ -252,8 +252,8 @@
         if (remaining > 0) {
           timerEl.textContent = formatDuration(remaining);
           mineBtn.disabled = true;
-          mineBtn.textContent = "Minage en cours...";
-          miningStatus.textContent = "Reviens dans 3 heures pour réclamer 200 $ et relancer.";
+          mineBtn.textContent = "Mining in progress...";
+          miningStatus.textContent = "Come back in 3 hours to claim $200 and restart.";
           return;
         } else {
           state.miningPendingClaim = true;
@@ -265,15 +265,15 @@
       if (state.miningPendingClaim) {
         timerEl.textContent = "00:00:00";
         mineBtn.disabled = false;
-        mineBtn.textContent = "Réclamer +200 $";
-        miningStatus.textContent = "Cycle terminé ! Clique pour encaisser 200 $ et relancer.";
+        mineBtn.textContent = "Claim +$200";
+        miningStatus.textContent = "Cycle complete! Click to claim $200 and restart.";
         return;
       }
 
       timerEl.textContent = "03:00:00";
       mineBtn.disabled = false;
-      mineBtn.textContent = "Démarrer le minage (3h)";
-      miningStatus.textContent = "Appuie sur le bouton pour lancer un cycle de 3 heures.";
+      mineBtn.textContent = "Start Mining (3h)";
+      miningStatus.textContent = "Press the button to start a 3-hour mining cycle.";
     }
 
     function handleMiningButton() {
@@ -283,7 +283,7 @@
         state.miningEndTime = Date.now() + THREE_HOURS_MS;
         saveState();
         renderMining();
-        document.getElementById("mining-status").textContent = "+200 $ ajoutés ! Nouveau cycle de 3 heures lancé.";
+        document.getElementById("mining-status").textContent = "+$200 added! New 3-hour cycle started.";
         return;
       }
 
@@ -344,7 +344,7 @@
       if (activeTasks.length === 0) {
         const emptyDiv = document.createElement("div");
         emptyDiv.className = "empty-tasks";
-        emptyDiv.textContent = "Toutes les tâches disponibles ont été accomplies et créditées. De nouvelles tâches apparaîtront lors du prochain renouvellement.";
+        emptyDiv.textContent = "All available tasks have been completed and credited. New tasks will appear on the next renewal.";
         container.appendChild(emptyDiv);
         return;
       }
@@ -378,11 +378,11 @@
         if (isPending) {
           const leftSec = Math.max(1, Math.ceil((TASK_PROCESS_MS - (Date.now() - state.pending[task.id])) / 1000));
           claimBtn.disabled = true;
-          claimBtn.textContent = "En cours...";
-          statusDiv.textContent = `Validation en cours (${leftSec} s) : crédit de +${task.points} pts et suppression auto à 15 s.`;
+          claimBtn.textContent = "Processing...";
+          statusDiv.textContent = `Verifying (${leftSec}s): +${task.points} pts credit and auto-removal at 15s.`;
         } else {
           claimBtn.disabled = true;
-          claimBtn.textContent = "Valider";
+          claimBtn.textContent = "Claim";
           claimBtn.onclick = () => claimTask(task.id, task.points);
           statusDiv.textContent = task.hint;
         }
@@ -423,7 +423,7 @@
       if (id && !state.done[id] && !state.pending[id]) {
         const status = document.getElementById("status-" + id);
         if (status) {
-          status.textContent = "Lien ouvert... activation de Valider dans 1,5 s.";
+          status.textContent = "Link opened... enabling Claim in 1.5s.";
         }
         setTimeout(() => {
           const btn = document.getElementById("btn-" + id);
@@ -431,7 +431,7 @@
           if (btn && !state.done[id] && !state.pending[id]) {
             btn.disabled = false;
             if (currentStatus) {
-              currentStatus.textContent = "Tu peux maintenant cliquer sur Valider.";
+              currentStatus.textContent = "You can now click Claim.";
             }
           }
         }, 1500);
@@ -470,10 +470,10 @@
     function onCopySuccess() {
       const copyBtn = document.getElementById("copy-btn");
       const copyStatus = document.getElementById("copy-status");
-      copyBtn.textContent = "Copié !";
-      copyStatus.textContent = "Adresse copiée dans le presse-papiers.";
+      copyBtn.textContent = "Copied!";
+      copyStatus.textContent = "Address copied to clipboard.";
       setTimeout(() => {
-        copyBtn.textContent = "Copier le contrat";
+        copyBtn.textContent = "Copy Contract";
         copyStatus.textContent = "";
       }, 2000);
     }
@@ -486,13 +486,13 @@
           if (fallbackCopyText(addr)) {
             onCopySuccess();
           } else {
-            copyStatus.textContent = "Copie bloquée par l'appareil : sélectionne l'adresse manuellement.";
+            copyStatus.textContent = "Copy blocked by device: please select the address manually.";
           }
         });
       } else if (fallbackCopyText(addr)) {
         onCopySuccess();
       } else {
-        copyStatus.textContent = "Copie bloquée par l'appareil : sélectionne l'adresse manuellement.";
+        copyStatus.textContent = "Copy blocked by device: please select the address manually.";
       }
     }
 
