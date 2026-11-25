@@ -6,27 +6,56 @@
   <title>HOGS ($HG) — Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: Arial, sans-serif;
       background: #111318;
       color: #ffffff;
       margin: 0;
-      padding: 20px;
+      padding: 16px 16px 88px;
       text-align: center;
     }
-    .card {
+    .app-shell {
       max-width: 440px;
       margin: 0 auto;
+    }
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+    .card {
       background: #1b1f2a;
       border-radius: 16px;
       padding: 20px;
+      margin-bottom: 14px;
     }
-    img {
-      width: 92px;
-      height: 92px;
+    .coin-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0 6px;
+    }
+    .coin-btn {
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 6px 0 10px;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+    .coin-btn img {
+      width: 138px;
+      height: 138px;
       border-radius: 50%;
       object-fit: cover;
-      margin-bottom: 10px;
+      display: block;
+      border: 3px solid #f59e0b;
+      box-shadow: 0 0 24px rgba(245, 158, 11, 0.25);
     }
     .user-badge {
       display: inline-block;
@@ -46,15 +75,21 @@
       flex: 1;
       background: #252b3b;
       border-radius: 10px;
-      padding: 10px;
+      padding: 12px;
       font-size: 13px;
+    }
+    .stat-box strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 16px;
+      color: #fbbf24;
     }
     .mining-box {
       background: #23293a;
       border: 1px solid #334155;
       border-radius: 12px;
       padding: 14px;
-      margin: 14px 0;
+      margin: 12px 0 4px;
       text-align: center;
     }
     .timer-display {
@@ -66,9 +101,9 @@
     }
     .section-title {
       text-align: left;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: bold;
-      margin: 18px 0 8px;
+      margin: 0 0 12px;
       color: #f8fafc;
     }
     .box {
@@ -112,7 +147,7 @@
       font-size: 12px;
       color: #94a3b8;
     }
-    button {
+    button.action-btn {
       display: inline-block;
       background: #f59e0b;
       color: #111318;
@@ -133,378 +168,150 @@
       opacity: 0.45;
       cursor: not-allowed;
     }
+    .bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #171a23;
+      border-top: 1px solid #2b3245;
+      padding: 8px 10px;
+      z-index: 50;
+    }
+    .bottom-nav-inner {
+      max-width: 440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .nav-btn {
+      background: #23293a;
+      color: #cbd5e1;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .nav-btn.active {
+      background: #2d2412;
+      color: #fbbf24;
+      border-color: #f59e0b;
+    }
+    .nav-icon {
+      font-size: 15px;
+      line-height: 1;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <img src="1795313325197.jpg" alt="HOGS Logo" />
-    <div id="user-badge" class="user-badge">Member: Guest</div>
-    <h1>HOGS ($HG)</h1>
-    <p>3-hour mining cycles, tasks, and HOGS community hub.</p>
-
-    <div class="stats-row">
-      <div class="stat-box">
-        <div>Mining</div>
-        <strong>$<span id="mining-balance">0</span></strong>
+  <div class="app-shell">
+    <!-- 1. GAUCHE : TASKS -->
+    <section id="panel-tasks" class="tab-panel">
+      <div class="card">
+        <div class="section-title">Tasks & Community Session</div>
+        <div class="stat-box" style="margin-bottom: 12px; text-align: left;">
+          <div>Tasks Balance</div>
+          <strong>$<span id="task-balance">0</span></strong>
+        </div>
+        <div id="tasks-container" class="tasks-grid"></div>
       </div>
-      <div class="stat-box">
-        <div>Tasks</div>
-        <strong><span id="points">0</span> pts</strong>
+    </section>
+
+    <!-- 2. CENTRE : COIN & MINING -->
+    <section id="panel-mining" class="tab-panel active">
+      <div class="card">
+        <div id="user-badge" class="user-badge">Member: Guest</div>
+        <div class="coin-hero">
+          <button class="coin-btn" type="button" onclick="handleMiningButton()" title="HOGS Coin">
+            <img src="1795313325197.jpg" alt="HOGS Coin" />
+          </button>
+          <h1 style="margin: 4px 0;">HOGS ($HG)</h1>
+          <div class="status-msg">Tap the coin or start your 3-hour mining session.</div>
+        </div>
+
+        <div class="mining-box">
+          <div><strong>Mining Session (every 3 hours)</strong></div>
+          <div class="status-msg">Reward per cycle: <strong>$200</strong></div>
+          <div id="timer-display" class="timer-display">03:00:00</div>
+          <button id="mine-btn" class="action-btn" type="button" onclick="handleMiningButton()">Start Mining (3h)</button>
+          <div id="mining-status" class="status-msg">Press the button to start a 3-hour mining cycle.</div>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div class="mining-box">
-      <div><strong>Mining Session (every 3 hours)</strong></div>
-      <div class="status-msg">Reward per cycle: <strong>$200</strong></div>
-      <div id="timer-display" class="timer-display">03:00:00</div>
-      <button id="mine-btn" type="button" onclick="handleMiningButton()">Start Mining (3h)</button>
-      <div id="mining-status" class="status-msg">Press the button to start a 3-hour mining cycle.</div>
-    </div>
+    <!-- 3. DROITE : REFERRAL -->
+    <section id="panel-referral" class="tab-panel">
+      <div class="card">
+        <div class="section-title">Referral & Invitations</div>
+        <div class="stat-box" style="margin-bottom: 12px;">
+          <div>Invited Members</div>
+          <strong><span id="referral-count">0</span></strong>
+        </div>
+        <div class="box">
+          <div><strong>Your Referral Link:</strong></div>
+          <div id="referral-link" class="contract-text">https://t.me/HOGSCOM_BOT</div>
+          <button id="copy-ref-btn" class="action-btn" type="button" onclick="copyReferralLink()">Copy Referral Link</button>
+          <div id="ref-copy-status" class="status-msg"></div>
+        </div>
+      </div>
+    </section>
 
-    <div class="box">
-      <div><strong>$HG Contract (TON):</strong></div>
-      <div id="contract-addr" class="contract-text">EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un</div>
-      <button id="copy-btn" type="button" onclick="copyContract()">Copy Contract</button>
-      <button class="btn-secondary" type="button" onclick="openExternalLink(null, 'https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">View on Tonviewer</button>
-      <div id="copy-status" class="status-msg"></div>
-    </div>
+    <!-- 4. 4E ONGLET : CROPS WALLET -->
+    <section id="panel-crops" class="tab-panel">
+      <div class="card">
+        <div class="section-title">Crops Wallet</div>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div>Crops Balance</div>
+            <strong><span id="crops-balance">0</span> CROPS</strong>
+          </div>
+          <div class="stat-box">
+            <div>Mining</div>
+            <strong>$<span id="mining-balance">0</span></strong>
+          </div>
+        </div>
 
-    <div class="section-title">Tasks & Community Session</div>
-    <div id="tasks-container" class="tasks-grid"></div>
+        <div class="box">
+          <div><strong>$HG Contract (TON):</strong></div>
+          <div id="contract-addr" class="contract-text">EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un</div>
+          <button id="copy-btn" class="action-btn" type="button" onclick="copyContract()">Copy Contract</button>
+          <button class="action-btn btn-secondary" type="button" onclick="openExternalLink(null, 'https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">View on Tonviewer</button>
+          <div id="copy-status" class="status-msg"></div>
+        </div>
+      </div>
+    </section>
   </div>
+
+  <!-- BARRE DU BAS (4 ONGLETS : GAUCHE TASKS, CENTRE MINING, DROITE REFERRAL, 4E CROPS WALLET) -->
+  <nav class="bottom-nav" aria-label="Main Navigation">
+    <div class="bottom-nav-inner">
+      <button id="nav-tasks" class="nav-btn" type="button" onclick="switchTab('tasks')">
+        <span class="nav-icon">📋</span>
+        <span>Tasks</span>
+      </button>
+      <button id="nav-mining" class="nav-btn active" type="button" onclick="switchTab('mining')">
+        <span class="nav-icon">🪙</span>
+        <span>Mining</span>
+      </button>
+      <button id="nav-referral" class="nav-btn" type="button" onclick="switchTab('referral')">
+        <span class="nav-icon">👥</span>
+        <span>Referral</span>
+      </button>
+      <button id="nav-crops" class="nav-btn" type="button" onclick="switchTab('crops')">
+        <span class="nav-icon">🌱</span>
+        <span>Crops</span>
+      </button>
+    </div>
+  </nav>
 
   <script>
     const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
     const MINING_REWARD = 200;
-    const TASK_PROCESS_MS = 15 * 1000;
-const VERIFY_ENDPOINT= "https//hogs-verify.kevinngabena.workers.dev";
-    // To renew tasks: add a new task object with a unique "id".
-    const TASKS = [
-      {
-        id: "task1",
-        title: "Join Session: HOGS COMMUNITY",
-        points: rewardUsd: 10,
-        chatusername: "COMMUNAUTE_HOGS",
-        buttonLabel: "Join Telegram",
-        url: "https://t.me/COMMUNAUTE_HOGS",
-        hint: "Join HOGS COMMUNITY first, then Claim."
-      },
-      {
-        id: "task2",
-        title: "Discover $HG on STON.fi",
-        rewardUsd: 10,
-        chatusername: null,
-        buttonLabel: "Open STON.fi",
-        url: "https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un",
-        hint: "Click \"Open STON.fi\" first to enable Claim."
-      }
-    ];
-
-    const tg = window.Telegram && window.Telegram.WebApp;
-    if (tg) {
-      try {
-        tg.ready();
-        tg.expand();
-      } catch (e) {}
-    }
-
-    const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-    const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : "guest";
-    const STORAGE_KEY = `hogs_miniapp_state_v5_${userKey}`;
-
-    const displayUser = tgUser
-      ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
-      : "Guest";
-    document.getElementById("user-badge").textContent = `Member: ${displayUser}`;
-
-    let state = JSON.parse(
-      localStorage.getItem(STORAGE_KEY) ||
-      '{"points":0,"done":{},"pending":{},"miningBalance":0,"miningEndTime":null,"miningPendingClaim":false}'
-    );
-
-    if (typeof state.miningBalance !== "number") state.miningBalance = 0;
-    if (typeof state.points !== "number") state.points = 0;
-    if (!state.done || typeof state.done !== "object") state.done = {};
-    if (!state.pending || typeof state.pending !== "object") state.pending = {};
-
-    const taskTimers = {};
-
-    function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-
-    function formatDuration(ms) {
-      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      return [hours, minutes, seconds].map((n) => String(n).padStart(2, "0")).join(":");
-    }
-
-    function renderMining() {
-      const timerEl = document.getElementById("timer-display");
-      const mineBtn = document.getElementById("mine-btn");
-      const miningStatus = document.getElementById("mining-status");
-      const balanceEl = document.getElementById("mining-balance");
-
-      balanceEl.textContent = state.miningBalance;
-
-      if (state.miningEndTime && !state.miningPendingClaim) {
-        const remaining = state.miningEndTime - Date.now();
-        if (remaining > 0) {
-          timerEl.textContent = formatDuration(remaining);
-          mineBtn.disabled = true;
-          mineBtn.textContent = "Mining in progress...";
-          miningStatus.textContent = "Come back in 3 hours to claim $200 and restart.";
-          return;
-        } else {
-          state.miningPendingClaim = true;
-          state.miningEndTime = null;
-          saveState();
-        }
-      }
-
-      if (state.miningPendingClaim) {
-        timerEl.textContent = "00:00:00";
-        mineBtn.disabled = false;
-        mineBtn.textContent = "Claim +$200";
-        miningStatus.textContent = "Cycle complete! Click to claim $200 and restart.";
-        return;
-      }
-
-      timerEl.textContent = "03:00:00";
-      mineBtn.disabled = false;
-      mineBtn.textContent = "Start Mining (3h)";
-      miningStatus.textContent = "Press the button to start a 3-hour mining cycle.";
-    }
-
-    function handleMiningButton() {
-      if (state.miningPendingClaim) {
-        state.miningBalance += MINING_REWARD;
-        state.miningPendingClaim = false;
-        state.miningEndTime = Date.now() + THREE_HOURS_MS;
-        saveState();
-        renderMining();
-        document.getElementById("mining-status").textContent = "+$200 added! New 3-hour cycle started.";
-        return;
-      }
-
-      if (!state.miningEndTime) {
-        state.miningEndTime = Date.now() + THREE_HOURS_MS;
-        state.miningPendingClaim = false;
-        saveState();
-        renderMining();
-      }
-    }
-
-    function finalizeTaskClaim(taskId, pts) {
-      if (taskTimers[taskId]) {
-        clearTimeout(taskTimers[taskId]);
-        delete taskTimers[taskId];
-      }
-      if (!state.done[taskId]) {
-        state.done[taskId] = true;
-        delete state.pending[taskId];
-        state.points += pts;
-        saveState();
-      }
-      document.getElementById("points").textContent = state.points;
-      renderTasks();
-    }
-
-    function scheduleTaskCompletion(task) {
-      if (taskTimers[task.id]) {
-        clearTimeout(taskTimers[task.id]);
-      }
-      const startAt = state.pending[task.id] || Date.now();
-      const remaining = Math.max(0, TASK_PROCESS_MS - (Date.now() - startAt));
-
-      taskTimers[task.id] = setTimeout(() => {
-        finalizeTaskClaim(task.id, task.points);
-      }, remaining);
-    }
-
-    function syncPendingTasksOnLoad() {
-      TASKS.forEach((task) => {
-        if (!state.done[task.id] && state.pending[task.id]) {
-          const elapsed = Date.now() - state.pending[task.id];
-          if (elapsed >= TASK_PROCESS_MS) {
-            finalizeTaskClaim(task.id, task.points);
-          } else {
-            scheduleTaskCompletion(task);
-          }
-        }
-      });
-    }
-
-    function renderTasks() {
-      const container = document.getElementById("tasks-container");
-      container.innerHTML = "";
-
-      const activeTasks = TASKS.filter((task) => !state.done[task.id]);
-
-      if (activeTasks.length === 0) {
-        const emptyDiv = document.createElement("div");
-        emptyDiv.className = "empty-tasks";
-        emptyDiv.textContent = "All available tasks have been completed and credited. New tasks will appear on the next renewal.";
-        container.appendChild(emptyDiv);
-        return;
-      }
-
-      activeTasks.forEach((task) => {
-        const isPending = Boolean(state.pending[task.id]);
-        const card = document.createElement("div");
-        card.className = "task";
-        card.id = "card-" + task.id;
-
-        const titleDiv = document.createElement("div");
-        const strong = document.createElement("strong");
-        strong.textContent = task.title;
-        titleDiv.appendChild(strong);
-        titleDiv.appendChild(document.createTextNode(` (+${task.points} pts)`));
-
-        const openBtn = document.createElement("button");
-        openBtn.type = "button";
-        openBtn.textContent = task.buttonLabel;
-        openBtn.disabled = isPending;
-        openBtn.onclick = () => openExternalLink(task.id, task.url);
-
-        const claimBtn = document.createElement("button");
-        claimBtn.type = "button";
-        claimBtn.id = "btn-" + task.id;
-
-        const statusDiv = document.createElement("div");
-        statusDiv.className = "status-msg";
-        statusDiv.id = "status-" + task.id;
-
-        if (isPending) {
-          const leftSec = Math.max(1, Math.ceil((TASK_PROCESS_MS - (Date.now() - state.pending[task.id])) / 1000));
-          claimBtn.disabled = true;
-          claimBtn.textContent = "Processing...";
-          statusDiv.textContent = `Verifying (${leftSec}s): +${task.points} pts credit and auto-removal at 15s.`;
-        } else {
-          claimBtn.disabled = true;
-          claimBtn.textContent = "Claim";
-          claimBtn.onclick = () => claimTask(task.id, task.points);
-          statusDiv.textContent = task.hint;
-        }
-
-        card.appendChild(titleDiv);
-        card.appendChild(openBtn);
-        card.appendChild(claimBtn);
-        card.appendChild(statusDiv);
-        container.appendChild(card);
-      });
-    }
-
-    function renderState() {
-      syncPendingTasksOnLoad();
-      document.getElementById("points").textContent = state.points;
-      renderTasks();
-      renderMining();
-    }
-
-    function openExternalLink(id, url) {
-      let opened = false;
-      try {
-        if (tg && url.startsWith("https://t.me/") && typeof tg.openTelegramLink === "function") {
-          tg.openTelegramLink(url);
-          opened = true;
-        } else if (tg && typeof tg.openLink === "function") {
-          tg.openLink(url);
-          opened = true;
-        }
-      } catch (e) {
-        opened = false;
-      }
-
-      if (!opened) {
-        window.open(url, "_blank", "noopener,noreferrer");
-      }
-
-      if (id && !state.done[id] && !state.pending[id]) {
-        const status = document.getElementById("status-" + id);
-        if (status) {
-          status.textContent = "Link opened... enabling Claim in 1.5s.";
-        }
-        setTimeout(() => {
-          const btn = document.getElementById("btn-" + id);
-          const currentStatus = document.getElementById("status-" + id);
-          if (btn && !state.done[id] && !state.pending[id]) {
-            btn.disabled = false;
-            if (currentStatus) {
-              currentStatus.textContent = "You can now click Claim.";
-            }
-          }
-        }, 1500);
-      }
-    }
-
-    function claimTask(id, pts) {
-      if (state.done[id] || state.pending[id]) return;
-      const task = TASKS.find((t) => t.id === id);
-      if (!task) return;
-
-      state.pending[id] = Date.now();
-      saveState();
-      renderTasks();
-      scheduleTaskCompletion(task);
-    }
-
-    function fallbackCopyText(text) {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      let ok = false;
-      try {
-        ok = document.execCommand("copy");
-      } catch (e) {
-        ok = false;
-      }
-      document.body.removeChild(textarea);
-      return ok;
-    }
-
-    function onCopySuccess() {
-      const copyBtn = document.getElementById("copy-btn");
-      const copyStatus = document.getElementById("copy-status");
-      copyBtn.textContent = "Copied!";
-      copyStatus.textContent = "Address copied to clipboard.";
-      setTimeout(() => {
-        copyBtn.textContent = "Copy Contract";
-        copyStatus.textContent = "";
-      }, 2000);
-    }
-
-    function copyContract() {
-      const addr = document.getElementById("contract-addr").textContent.trim();
-      const copyStatus = document.getElementById("copy-status");
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        navigator.clipboard.writeText(addr).then(onCopySuccess).catch(() => {
-          if (fallbackCopyText(addr)) {
-            onCopySuccess();
-          } else {
-            copyStatus.textContent = "Copy blocked by device: please select the address manually.";
-          }
-        });
-      } else if (fallbackCopyText(addr)) {
-        onCopySuccess();
-      } else {
-        copyStatus.textContent = "Copy blocked by device: please select the address manually.";
-      }
-    }
-
-    renderState();
-    setInterval(() => {
-      renderMining();
-      if (Object.keys(state.pending).length > 0) {
-        renderTasks();
-      }
-    }, 1000);
-  </script>
-</body>
-</html>
+    const TASK
