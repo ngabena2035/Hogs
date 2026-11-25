@@ -28,6 +28,33 @@
       object-fit: cover;
       margin-bottom: 12px;
     }
+    .user-badge {
+      display: inline-block;
+      background: #252b3b;
+      color: #cbd5e1;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .box {
+      background: #252b3b;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 12px 0;
+      text-align: left;
+      word-break: break-all;
+      font-size: 13px;
+    }
+    .contract-text {
+      background: #171b24;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #fcd34d;
+    }
     .task {
       background: #252b3b;
       border-radius: 10px;
@@ -35,34 +62,58 @@
       margin: 10px 0;
       text-align: left;
     }
-    button {
+    button, a.btn {
+      display: inline-block;
+      text-decoration: none;
       background: #f59e0b;
       color: #111318;
       border: none;
       border-radius: 8px;
-      padding: 8px 14px;
+      padding: 8px 12px;
       font-weight: bold;
       cursor: pointer;
       margin-top: 8px;
+      margin-right: 6px;
+      font-size: 13px;
+    }
+    a.btn-secondary, button.btn-secondary {
+      background: #334155;
+      color: #ffffff;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <img src="photo_2026-11-25_17-49-58.jpg" alt="Logo HOGS" />
+    <img src="1795313325197.jpg" alt="Logo HOGS" />
+    <div id="user-badge" class="user-badge">Membre : Invité</div>
     <h1>HOGS ($HG)</h1>
     <p>Hub communautaire, tâches et airdrop HOGS.</p>
     <p><strong>Points : <span id="points">0</span></strong></p>
 
-    <div class="task">
-      <div><strong>1. Rejoindre la communauté HOGS</strong> (+50 pts)</div>
-      <button onclick="claimTask(this, 50)">Valider la tâche</button>
+    <div class="box">
+      <div><strong>Contrat $HG (TON) :</strong></div>
+      <div id="contract-addr" class="contract-text">EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un</div>
+      <button id="copy-btn" type="button" onclick="copyContract()">Copier le contrat</button>
+      <a class="btn btn-secondary" href="https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un" target="_blank">Voir sur Tonviewer</a>
     </div>
 
     <div class="task">
-      <div><strong>2. Partager le projet HOGS</strong> (+100 pts)</div>
-      <button onclick="claimTask(this, 100)">Valider la tâche</button>
+      <div><strong>1. Rejoindre la communauté HOGS</strong> (+50 pts)</div>
+      <a class="btn" href="https://t.me/COMMUNAUTE_HOGS" target="_blank" onclick="unlockTask('task1')">Ouvrir Telegram</a>
+      <button id="btn-task1" type="button" onclick="claimTask('task1', 50)" disabled>Valider</button>
     </div>
+
+    <div class="task">
+      <div><strong>2. Découvrir $HG sur STON.fi</strong> (+100 pts)</div>
+      <a class="btn" href="https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un" target="_blank" onclick="unlockTask('task2')">Ouvrir STON.fi</a>
+      <button id="btn-task2" type="button" onclick="claimTask('task2', 100)" disabled>Valider</button>
+    </div>
+
+    <button class="btn-secondary" type="button" onclick="resetProgress()">Réinitialiser (test)</button>
   </div>
 
   <script>
@@ -72,13 +123,70 @@
       tg.expand();
     }
 
-    let points = 0;
-    function claimTask(btn, pts) {
-      points += pts;
-      document.getElementById("points").textContent = points;
-      btn.disabled = true;
-      btn.textContent = "Validé";
+    const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    const userKey = tgUser && tgUser.id ? tg_${tgUser.id} : "guest";
+    const STORAGE_KEY = hogs_miniapp_state_v1_${userKey};
+
+    const displayUser = tgUser
+      ? (tgUser.first_name + (tgUser.username ?  (@${tgUser.username}) : ""))
+      : "Invité";
+    document.getElementById("user-badge").textContent = Membre : ${displayUser};let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"points":0,"done":{}}');
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
+
+    function renderState() {
+      document.getElementById("points").textContent = state.points;
+      ["task1", "task2"].forEach((id) => {
+        const btn = document.getElementById("btn-" + id);
+        if (state.done[id]) {
+          btn.disabled = true;
+          btn.textContent = "Validé";
+        } else {
+          btn.disabled = true;
+          btn.textContent = "Valider";
+        }
+      });
+    }
+
+    function unlockTask(id) {
+      if (state.done[id]) return;
+      setTimeout(() => {
+        const btn = document.getElementById("btn-" + id);
+        if (!state.done[id]) {
+          btn.disabled = false;
+        }
+      }, 2000);
+    }
+
+    function claimTask(id, pts) {
+      if (state.done[id]) return;
+      state.done[id] = true;
+      state.points += pts;
+      saveState();
+      renderState();
+    }
+
+    function resetProgress() {
+      state = { points: 0, done: {} };
+      saveState();
+      renderState();
+    }
+
+    function copyContract() {
+      const addr = document.getElementById("contract-addr").textContent.trim();
+      const copyBtn = document.getElementById("copy-btn");
+      navigator.clipboard.writeText(addr).then(() => {
+        copyBtn.textContent = "Copié !";
+        setTimeout(() => { copyBtn.textContent = "Copier le contrat"; }, 2000);
+        if (tg && tg.showPopup) {
+          tg.showPopup({ title: "Copié", message: "Adresse du contrat HOGS copiée.", buttons: [{ type: "ok" }] });
+        }
+      });
+    }
+
+    renderState();
   </script>
 </body>
 </html>
