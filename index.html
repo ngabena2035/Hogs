@@ -122,7 +122,9 @@
 
     <button class="btn-secondary" type="button" onclick="resetProgress()">Réinitialiser (test)</button>
     <div id="reset-status" class="status-msg"></div>
-  </div><script>
+  </div>
+
+  <script>
     const tg = window.Telegram && window.Telegram.WebApp;
     if (tg) {
       try {
@@ -132,13 +134,13 @@
     }
 
     const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-    const userKey = tgUser && tgUser.id ? tg_${tgUser.id} : "guest";
-    const STORAGE_KEY = hogs_miniapp_state_v1_${userKey};
+    const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : "guest";
+    const STORAGE_KEY = `hogs_miniapp_state_v1_${userKey}`;
 
     const displayUser = tgUser
-      ? (tgUser.first_name + (tgUser.username ?  (@${tgUser.username}) : ""))
+      ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
       : "Invité";
-    document.getElementById("user-badge").textContent = Membre : ${displayUser};
+    document.getElementById("user-badge").textContent = `Membre : ${displayUser}`;
 
     let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"points":0,"done":{}}');
 
@@ -240,7 +242,9 @@
         copyBtn.textContent = "Copier le contrat";
         copyStatus.textContent = "";
       }, 2000);
-    }function copyContract() {
+    }
+
+    function copyContract() {
       const addr = document.getElementById("contract-addr").textContent.trim();
       const copyStatus = document.getElementById("copy-status");
       if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
