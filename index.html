@@ -15,18 +15,18 @@
       text-align: center;
     }
     .card {
-      max-width: 420px;
+      max-width: 440px;
       margin: 0 auto;
       background: #1b1f2a;
       border-radius: 16px;
       padding: 20px;
     }
     img {
-      width: 96px;
-      height: 96px;
+      width: 92px;
+      height: 92px;
       border-radius: 50%;
       object-fit: cover;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .user-badge {
       display: inline-block;
@@ -37,11 +37,45 @@
       border-radius: 999px;
       margin-bottom: 8px;
     }
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .stat-box {
+      flex: 1;
+      background: #252b3b;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+    }
+    .mining-box {
+      background: #23293a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      margin: 14px 0;
+      text-align: center;
+    }
+    .timer-display {
+      font-family: monospace;
+      font-size: 28px;
+      font-weight: bold;
+      color: #fbbf24;
+      margin: 8px 0;
+    }
+    .section-title {
+      text-align: left;
+      font-size: 15px;
+      font-weight: bold;
+      margin: 18px 0 8px;
+      color: #f8fafc;
+    }
     .box {
       background: #252b3b;
       border-radius: 10px;
       padding: 12px;
-      margin: 12px 0;
+      margin: 10px 0;
       text-align: left;
       word-break: break-all;
       font-size: 13px;
@@ -55,12 +89,23 @@
       font-size: 12px;
       color: #fcd34d;
     }
+    .tasks-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
     .task {
       background: #252b3b;
       border-radius: 10px;
       padding: 12px;
-      margin: 10px 0;
       text-align: left;
+    }
+    .empty-tasks {
+      background: #252b3b;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 13px;
+      color: #94a3b8;
     }
     .status-msg {
       margin-top: 6px;
@@ -73,7 +118,7 @@
       color: #111318;
       border: none;
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 9px 13px;
       font-weight: bold;
       cursor: pointer;
       margin-top: 8px;
@@ -95,8 +140,26 @@
     <img src="1795313325197.jpg" alt="Logo HOGS" />
     <div id="user-badge" class="user-badge">Membre : Invité</div>
     <h1>HOGS ($HG)</h1>
-    <p>Hub communautaire, tâches et airdrop HOGS.</p>
-    <p><strong>Points : <span id="points">0</span></strong></p>
+    <p>Minage toutes les 3 heures, tâches et communauté HOGS.</p>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div>Minage</div>
+        <strong><span id="mining-balance">0</span> $</strong>
+      </div>
+      <div class="stat-box">
+        <div>Tâches</div>
+        <strong><span id="points">0</span> pts</strong>
+      </div>
+    </div>
+
+    <div class="mining-box">
+      <div><strong>Session de minage (toutes les 3 heures)</strong></div>
+      <div class="status-msg">Récompense par cycle : <strong>200 $</strong></div>
+      <div id="timer-display" class="timer-display">03:00:00</div>
+      <button id="mine-btn" type="button" onclick="handleMiningButton()">Démarrer le minage (3h)</button>
+      <div id="mining-status" class="status-msg">Appuie sur le bouton pour lancer un cycle de 3 heures.</div>
+    </div>
 
     <div class="box">
       <div><strong>Contrat $HG (TON) :</strong></div>
@@ -106,23 +169,35 @@
       <div id="copy-status" class="status-msg"></div>
     </div>
 
-    <div class="task">
-      <div><strong>1. Rejoindre la communauté HOGS</strong> (+50 pts)</div>
-      <button type="button" onclick="openExternalLink('task1', 'https://t.me/COMMUNAUTE_HOGS')">Ouvrir Telegram</button>
-      <button id="btn-task1" type="button" onclick="claimTask('task1', 50)" disabled>Valider</button>
-      <div id="status-task1" class="status-msg">Clique d'abord sur « Ouvrir Telegram » pour activer Valider.</div>
-    </div>
-
-    <div class="task">
-      <div><strong>2. Découvrir $HG sur STON.fi</strong> (+100 pts)</div>
-      <button type="button" onclick="openExternalLink('task2', 'https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">Ouvrir STON.fi</button>
-      <button id="btn-task2" type="button" onclick="claimTask('task2', 100)" disabled>Valider</button>
-      <div id="status-task2" class="status-msg">Clique d'abord sur « Ouvrir STON.fi » pour activer Valider.</div>
-    </div>
-
+    <div class="section-title">Session Tâches & Communauté</div>
+    <div id="tasks-container" class="tasks-grid"></div>
   </div>
 
   <script>
+    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+    const MINING_REWARD = 200;
+    const TASK_PROCESS_MS = 15 * 1000;
+
+    // Pour renouveler les tâches : ajoute un nouvel objet avec un nouvel "id" unique.
+    const TASKS = [
+      {
+        id: "task1",
+        title: "Session Rejoindre : Communauté HOGS",
+        points: 50,
+        buttonLabel: "Rejoindre Telegram",
+        url: "https://t.me/COMMUNAUTE_HOGS",
+        hint: "Clique d'abord sur « Rejoindre Telegram » pour activer Valider."
+      },
+      {
+        id: "task2",
+        title: "Découvrir $HG sur STON.fi",
+        points: 100,
+        buttonLabel: "Ouvrir STON.fi",
+        url: "https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un",
+        hint: "Clique d'abord sur « Ouvrir STON.fi » pour activer Valider."
+      }
+    ];
+
     const tg = window.Telegram && window.Telegram.WebApp;
     if (tg) {
       try {
@@ -133,33 +208,198 @@
 
     const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
     const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : "guest";
-    const STORAGE_KEY = `hogs_miniapp_state_v1_${userKey}`;
+    const STORAGE_KEY = `hogs_miniapp_state_v4_${userKey}`;
 
     const displayUser = tgUser
       ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
       : "Invité";
     document.getElementById("user-badge").textContent = `Membre : ${displayUser}`;
 
-    let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"points":0,"done":{}}');
+    let state = JSON.parse(
+      localStorage.getItem(STORAGE_KEY) ||
+      '{"points":0,"done":{},"pending":{},"miningBalance":0,"miningEndTime":null,"miningPendingClaim":false}'
+    );
+
+    if (typeof state.miningBalance !== "number") state.miningBalance = 0;
+    if (typeof state.points !== "number") state.points = 0;
+    if (!state.done || typeof state.done !== "object") state.done = {};
+    if (!state.pending || typeof state.pending !== "object") state.pending = {};
+
+    const taskTimers = {};
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
-    function renderState() {
-      document.getElementById("points").textContent = state.points;
-      ["task1", "task2"].forEach((id) => {
-        const btn = document.getElementById("btn-" + id);
-        const status = document.getElementById("status-" + id);
-        if (state.done[id]) {
-          btn.disabled = true;
-          btn.textContent = "Validé";
-          status.textContent = "Tâche déjà validée.";
+    function formatDuration(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return [hours, minutes, seconds].map((n) => String(n).padStart(2, "0")).join(":");
+    }
+
+    function renderMining() {
+      const timerEl = document.getElementById("timer-display");
+      const mineBtn = document.getElementById("mine-btn");
+      const miningStatus = document.getElementById("mining-status");
+      const balanceEl = document.getElementById("mining-balance");
+
+      balanceEl.textContent = state.miningBalance;
+
+      if (state.miningEndTime && !state.miningPendingClaim) {
+        const remaining = state.miningEndTime - Date.now();
+        if (remaining > 0) {
+          timerEl.textContent = formatDuration(remaining);
+          mineBtn.disabled = true;
+          mineBtn.textContent = "Minage en cours...";
+          miningStatus.textContent = "Reviens dans 3 heures pour réclamer 200 $ et relancer.";
+          return;
         } else {
-          btn.disabled = true;
-          btn.textContent = "Valider";
+          state.miningPendingClaim = true;
+          state.miningEndTime = null;
+          saveState();
+        }
+      }
+
+      if (state.miningPendingClaim) {
+        timerEl.textContent = "00:00:00";
+        mineBtn.disabled = false;
+        mineBtn.textContent = "Réclamer +200 $";
+        miningStatus.textContent = "Cycle terminé ! Clique pour encaisser 200 $ et relancer.";
+        return;
+      }
+
+      timerEl.textContent = "03:00:00";
+      mineBtn.disabled = false;
+      mineBtn.textContent = "Démarrer le minage (3h)";
+      miningStatus.textContent = "Appuie sur le bouton pour lancer un cycle de 3 heures.";
+    }
+
+    function handleMiningButton() {
+      if (state.miningPendingClaim) {
+        state.miningBalance += MINING_REWARD;
+        state.miningPendingClaim = false;
+        state.miningEndTime = Date.now() + THREE_HOURS_MS;
+        saveState();
+        renderMining();
+        document.getElementById("mining-status").textContent = "+200 $ ajoutés ! Nouveau cycle de 3 heures lancé.";
+        return;
+      }
+
+      if (!state.miningEndTime) {
+        state.miningEndTime = Date.now() + THREE_HOURS_MS;
+        state.miningPendingClaim = false;
+        saveState();
+        renderMining();
+      }
+    }
+
+    function finalizeTaskClaim(taskId, pts) {
+      if (taskTimers[taskId]) {
+        clearTimeout(taskTimers[taskId]);
+        delete taskTimers[taskId];
+      }
+      if (!state.done[taskId]) {
+        state.done[taskId] = true;
+        delete state.pending[taskId];
+        state.points += pts;
+        saveState();
+      }
+      document.getElementById("points").textContent = state.points;
+      renderTasks();
+    }
+
+    function scheduleTaskCompletion(task) {
+      if (taskTimers[task.id]) {
+        clearTimeout(taskTimers[task.id]);
+      }
+      const startAt = state.pending[task.id] || Date.now();
+      const remaining = Math.max(0, TASK_PROCESS_MS - (Date.now() - startAt));
+
+      taskTimers[task.id] = setTimeout(() => {
+        finalizeTaskClaim(task.id, task.points);
+      }, remaining);
+    }
+
+    function syncPendingTasksOnLoad() {
+      TASKS.forEach((task) => {
+        if (!state.done[task.id] && state.pending[task.id]) {
+          const elapsed = Date.now() - state.pending[task.id];
+          if (elapsed >= TASK_PROCESS_MS) {
+            finalizeTaskClaim(task.id, task.points);
+          } else {
+            scheduleTaskCompletion(task);
+          }
         }
       });
+    }
+
+    function renderTasks() {
+      const container = document.getElementById("tasks-container");
+      container.innerHTML = "";
+
+      const activeTasks = TASKS.filter((task) => !state.done[task.id]);
+
+      if (activeTasks.length === 0) {
+        const emptyDiv = document.createElement("div");
+        emptyDiv.className = "empty-tasks";
+        emptyDiv.textContent = "Toutes les tâches disponibles ont été accomplies et créditées. De nouvelles tâches apparaîtront lors du prochain renouvellement.";
+        container.appendChild(emptyDiv);
+        return;
+      }
+
+      activeTasks.forEach((task) => {
+        const isPending = Boolean(state.pending[task.id]);
+        const card = document.createElement("div");
+        card.className = "task";
+        card.id = "card-" + task.id;
+
+        const titleDiv = document.createElement("div");
+        const strong = document.createElement("strong");
+        strong.textContent = task.title;
+        titleDiv.appendChild(strong);
+        titleDiv.appendChild(document.createTextNode(` (+${task.points} pts)`));
+
+        const openBtn = document.createElement("button");
+        openBtn.type = "button";
+        openBtn.textContent = task.buttonLabel;
+        openBtn.disabled = isPending;
+        openBtn.onclick = () => openExternalLink(task.id, task.url);
+
+        const claimBtn = document.createElement("button");
+        claimBtn.type = "button";
+        claimBtn.id = "btn-" + task.id;
+
+        const statusDiv = document.createElement("div");
+        statusDiv.className = "status-msg";
+        statusDiv.id = "status-" + task.id;
+
+        if (isPending) {
+          const leftSec = Math.max(1, Math.ceil((TASK_PROCESS_MS - (Date.now() - state.pending[task.id])) / 1000));
+          claimBtn.disabled = true;
+          claimBtn.textContent = "En cours...";
+          statusDiv.textContent = `Validation en cours (${leftSec} s) : crédit de +${task.points} pts et suppression auto à 15 s.`;
+        } else {
+          claimBtn.disabled = true;
+          claimBtn.textContent = "Valider";
+          claimBtn.onclick = () => claimTask(task.id, task.points);
+          statusDiv.textContent = task.hint;
+        }
+
+        card.appendChild(titleDiv);
+        card.appendChild(openBtn);
+        card.appendChild(claimBtn);
+        card.appendChild(statusDiv);
+        container.appendChild(card);
+      });
+    }
+
+    function renderState() {
+      syncPendingTasksOnLoad();
+      document.getElementById("points").textContent = state.points;
+      renderTasks();
+      renderMining();
     }
 
     function openExternalLink(id, url) {
@@ -180,37 +420,33 @@
         window.open(url, "_blank", "noopener,noreferrer");
       }
 
-      if (id && !state.done[id]) {
+      if (id && !state.done[id] && !state.pending[id]) {
         const status = document.getElementById("status-" + id);
-        status.textContent = "Lien ouvert... activation de Valider dans 1,5 s.";
+        if (status) {
+          status.textContent = "Lien ouvert... activation de Valider dans 1,5 s.";
+        }
         setTimeout(() => {
           const btn = document.getElementById("btn-" + id);
-          if (btn && !state.done[id]) {
+          const currentStatus = document.getElementById("status-" + id);
+          if (btn && !state.done[id] && !state.pending[id]) {
             btn.disabled = false;
-            status.textContent = "Tu peux maintenant cliquer sur Valider.";
+            if (currentStatus) {
+              currentStatus.textContent = "Tu peux maintenant cliquer sur Valider.";
+            }
           }
         }, 1500);
       }
     }
 
     function claimTask(id, pts) {
-      if (state.done[id]) return;
-      state.done[id] = true;
-      state.points += pts;
-      saveState();
-      renderState();
-    }
+      if (state.done[id] || state.pending[id]) return;
+      const task = TASKS.find((t) => t.id === id);
+      if (!task) return;
 
-    function resetProgress() {
-      state = { points: 0, done: {} };
+      state.pending[id] = Date.now();
       saveState();
-      renderState();
-      document.getElementById("status-task1").textContent = "Clique d'abord sur « Ouvrir Telegram » pour activer Valider.";
-      document.getElementById("status-task2").textContent = "Clique d'abord sur « Ouvrir STON.fi » pour activer Valider.";
-      document.getElementById("reset-status").textContent = "Progression réinitialisée à 0 point.";
-      setTimeout(() => {
-        document.getElementById("reset-status").textContent = "";
-      }, 2500);
+      renderTasks();
+      scheduleTaskCompletion(task);
     }
 
     function fallbackCopyText(text) {
@@ -261,6 +497,12 @@
     }
 
     renderState();
+    setInterval(() => {
+      renderMining();
+      if (Object.keys(state.pending).length > 0) {
+        renderTasks();
+      }
+    }, 1000);
   </script>
 </body>
 </html>
