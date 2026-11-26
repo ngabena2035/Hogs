@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HOGS ($HG) — Mini App</title>
+  <title>$HOGS ($HG) — Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <style>
     :root {
       --bg: #0b0f17;
@@ -27,10 +28,14 @@
     }
 
     body {
-      background: var(--bg);
+      background:
+        radial-gradient(circle at 50% 10%, rgba(245, 183, 0, 0.16), transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(245, 183, 0, 0.08), transparent 40%),
+        var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 18px 16px 104px;
+      padding: 18px 16px 108px;
+      overflow-x: hidden;
     }
 
     .container {
@@ -46,12 +51,14 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 16px;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
     }
 
     .title {
       font-size: 1.25rem;
       font-weight: 800;
       color: var(--accent);
+      letter-spacing: 0.3px;
     }
 
     .sub {
@@ -73,6 +80,12 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 12px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .stat-box.bump {
+      animation: popScale 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      border-color: rgba(245, 183, 0, 0.6);
     }
 
     .stat-label {
@@ -87,24 +100,71 @@
     }
 
     .mining-center {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding: 8px 0 4px;
+      padding: 10px 0 4px;
     }
 
-    .ton-circle {
-      width: 96px;
-      height: 96px;
+    .hogs-logo-wrap {
+      position: relative;
+      width: 126px;
+      height: 126px;
       border-radius: 50%;
-      background: var(--ton-soft);
-      border: 3px solid var(--ton-blue);
-      box-shadow: 0 0 24px rgba(0, 152, 234, 0.25);
+      padding: 4px;
+      background: linear-gradient(135deg, #ffe07d, #f5b700, #a87400);
+      box-shadow: 0 0 26px rgba(245, 183, 0, 0.35);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
+      cursor: pointer;
+      animation: hogsFloat 3.2s ease-in-out infinite, hogsGlow 2.6s ease-in-out infinite;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .hogs-logo-wrap::after {
+      content: "";
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      border: 2px solid rgba(245, 183, 0, 0.45);
+      animation: ringExpand 2.3s ease-out infinite;
+      pointer-events: none;
+    }
+
+    .hogs-logo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .hogs-logo-wrap:active {
+      transform: scale(0.93);
+    }
+
+    .hogs-logo-wrap.claim-burst {
+      animation: claimFlash 0.68s ease-out;
+    }
+
+    .float-reward {
+      position: absolute;
+      top: 10px;
+      font-size: 1.08rem;
+      font-weight: 800;
+      color: var(--accent);
+      text-shadow: 0 4px 16px rgba(245, 183, 0, 0.65);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 5;
+    }
+
+    .float-reward.show {
+      animation: floatUpFade 1.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .mined-total-box {
@@ -134,6 +194,22 @@
       border-radius: 12px;
       padding: 12px;
       margin-top: 10px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .task-item:hover {
+      border-color: rgba(245, 183, 0, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .wallet-box {
+      background: rgba(0, 152, 234, 0.08);
+      border: 1px solid rgba(0, 152, 234, 0.35);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      word-break: break-all;
     }
 
     button {
@@ -147,6 +223,16 @@
       background: var(--accent);
       color: #111;
       margin-top: 10px;
+      transition: transform 0.16s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    button:not(:disabled):hover {
+      box-shadow: 0 6px 18px rgba(245, 183, 0, 0.28);
+      transform: translateY(-1px);
+    }
+
+    button:not(:disabled):active {
+      transform: scale(0.97);
     }
 
     button:disabled {
@@ -160,6 +246,15 @@
       border: 1px solid rgba(245, 183, 0, 0.35);
     }
 
+    button.ton-btn {
+      background: var(--ton-blue);
+      color: #fff;
+    }
+
+    button.ton-btn:not(:disabled):hover {
+      box-shadow: 0 6px 18px rgba(0, 152, 234, 0.35);
+    }
+
     input {
       width: 100%;
       background: #0d131f;
@@ -169,6 +264,12 @@
       color: var(--text);
       margin-top: 8px;
       font-size: 0.9rem;
+      transition: border-color 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
     }
 
     .status {
@@ -196,9 +297,9 @@
 
     .screen.active {
       display: block;
+      animation: screenFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    /* Barre des 4 cercles en bas */
     .bottom-dock {
       position: fixed;
       left: 0;
@@ -206,7 +307,7 @@
       bottom: 0;
       background: rgba(11, 15, 23, 0.96);
       border-top: 1px solid var(--border);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       padding: 10px 16px 14px;
       z-index: 20;
     }
@@ -233,6 +334,8 @@
       color: var(--muted);
       font-size: 0.72rem;
       font-weight: 600;
+      box-shadow: none !important;
+      transform: none !important;
     }
 
     .circle-btn {
@@ -246,133 +349,215 @@
       border: 2px solid rgba(255, 255, 255, 0.14);
       color: var(--text);
       font-size: 1.15rem;
-      transition: all 0.2s ease;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
     }
 
-    .circle-btn.ton-main {
+    .circle-btn.hogs-main {
       width: 58px;
       height: 58px;
-      border-color: var(--ton-blue);
-      background: var(--ton-soft);
+      border-color: rgba(245, 183, 0, 0.65);
+      background: var(--accent-soft);
+      color: var(--accent);
     }
 
     .circle-tab.active .circle-btn {
       background: var(--accent);
       border-color: var(--accent);
       color: #111;
-      box-shadow: 0 0 16px rgba(245, 183, 0, 0.45);
-      transform: translateY(-2px);
+      box-shadow: 0 0 18px rgba(245, 183, 0, 0.55);
+      transform: translateY(-4px) scale(1.06);
     }
 
     .circle-tab.active span {
       color: var(--accent);
       font-weight: 700;
     }
+
+    @keyframes screenFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes hogsFloat {
+      0%, 100% {
+        transform: translateY(0px) rotate(-1.5deg);
+      }
+      50% {
+        transform: translateY(-6px) rotate(1.5deg);
+      }
+    }
+
+    @keyframes hogsGlow {
+      0%, 100% {
+        box-shadow: 0 0 22px rgba(245, 183, 0, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 36px rgba(245, 183, 0, 0.62);
+      }
+    }
+
+    @keyframes ringExpand {
+      0% {
+        transform: scale(0.96);
+        opacity: 0.75;
+      }
+      100% {
+        transform: scale(1.22);
+        opacity: 0;
+      }
+    }
+
+    @keyframes claimFlash {
+      0% {
+        transform: scale(1);
+      }
+      45% {
+        transform: scale(1.15) rotate(4deg);
+        box-shadow: 0 0 42px rgba(245, 183, 0, 0.9);
+      }
+      100% {
+        transform: scale(1) rotate(0deg);
+      }
+    }
+
+    @keyframes floatUpFade {
+      0% {
+        opacity: 0;
+        transform: translateY(6px) scale(0.9);
+      }
+      20% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-44px) scale(1.1);
+      }
+    }
+
+    @keyframes popScale {
+      0% {
+        transform: scale(1);
+      }
+      45% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- En-tête commun -->
+    <!-- Shared Header -->
     <div class="card">
-      <div class="title">HOGS ($HG)</div>
-      <div class="sub" id="player-greeting">Bienvenue sur la Mini App HOGS</div>
+      <div class="title">$HOGS ($HG)</div>
+      <div class="sub" id="player-greeting">Welcome to the $HOGS Mini App</div>
       <div class="stats-grid">
-        <div class="stat-box">
+        <div class="stat-box" id="points-box">
           <div class="stat-label">Points</div>
           <div class="stat-value" id="points-value">0</div>
         </div>
-        <div class="stat-box">
-          <div class="stat-label">Tâches accomplies</div>
+        <div class="stat-box" id="tasks-box">
+          <div class="stat-label">Completed Tasks</div>
           <div class="stat-value" id="tasks-count">0</div>
         </div>
       </div>
     </div>
 
-    <!-- ÉCRAN 1 (1er cercle gauche) : Tâches -->
+    <!-- SCREEN 1: Tasks -->
     <section id="screen-tasks" class="screen">
       <div class="card">
-        <div style="font-weight: 700; font-size: 1.05rem;">Tâches</div>
-        <div class="sub">Complète les tâches communautaires et celles ajoutées pour gagner des Points.</div>
+        <div style="font-weight: 700; font-size: 1.05rem;">Tasks</div>
+        <div class="sub">Complete community tasks and added tasks to earn Points.</div>
 
         <div class="task-item">
-          <div style="font-weight: 700;">Communauté officielle Telegram</div>
-          <div class="sub">Rejoins le groupe/canal puis vérifie ton adhésion (+50 Points).</div>
-          <button class="secondary" onclick="openCommunity()">Ouvrir le groupe / canal</button>
-          <button id="verify-task-btn" onclick="verifyCommunityTask()">Vérifier ma tâche (+50 Points)</button>
+          <div style="font-weight: 700;">Official Telegram Community</div>
+          <div class="sub">Join the group/channel and verify your membership (+50 Points).</div>
+          <button class="secondary" onclick="openCommunity()">Open Group / Channel</button>
+          <button id="verify-task-btn" onclick="verifyCommunityTask()">Verify Task (+50 Points)</button>
         </div>
 
         <div id="custom-tasks-list"></div>
       </div>
     </section>
 
-    <!-- ÉCRAN 2 (2e cercle principal / TON) : Minage -->
+    <!-- SCREEN 2: Mining (Animated $HOGS Coin) -->
     <section id="screen-mining" class="screen active">
       <div class="card">
         <div class="mining-center">
-          <!-- Cercle dessiné au logo TON -->
-          <div class="ton-circle" aria-label="Logo TON">
-            <svg width="46" height="46" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M28 6C15.85 6 6 14.95 6 26C6 33.76 10.94 40.49 18.17 43.82L28 50L37.83 43.82C45.06 40.49 50 33.76 50 26C50 14.95 40.15 6 28 6Z"
-                fill="#0098EA"
-              />
-              <path
-                d="M17.5 20.5H38.5L28 38.5L17.5 20.5Z"
-                stroke="#FFFFFF"
-                stroke-width="3.2"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M28 20.5V38.5"
-                stroke="#FFFFFF"
-                stroke-width="3.2"
-                stroke-linecap="round"
-              />
-            </svg>
+          <div class="float-reward" id="float-reward">+200 $HG</div>
+
+          <div class="hogs-logo-wrap" id="hogs-mining-logo" aria-label="$HOGS Logo" onclick="claimMining()">
+            <img
+              id="hogs-coin-img"
+              src="./hogs-coin.jpg"
+              alt="$HOGS Gold Coin"
+              onerror="if (!this.dataset.fb) { this.dataset.fb = '1'; this.src = 'https://raw.githubusercontent.com/ngabena2035/Hogs/main/hogs-coin.jpg'; }"
+            />
           </div>
 
-          <!-- Total miné juste en bas de l'icône de minage -->
-          <div class="mined-total-box">
-            <div class="mined-total-label">Total miné</div>
+          <div class="mined-total-box" id="mined-total-box">
+            <div class="mined-total-label">Total Mined</div>
             <div class="mined-total-value" id="mined-hg-total">0 $HG</div>
           </div>
 
-          <div class="sub" id="mine-timer">Cycle de 3h : mine 200 $HG toutes les 3 heures</div>
-          <button id="mine-btn" onclick="claimMining()">Réclamer le minage (+200 $HG)</button>
+          <div class="sub" id="mine-timer">3h cycle: mine 200 $HG every 3 hours</div>
+          <button id="mine-btn" onclick="claimMining()">Claim Mining (+200 $HG)</button>
         </div>
       </div>
     </section>
 
-    <!-- ÉCRAN 3 (3e cercle) : Parrainage -->
+    <!-- SCREEN 3: Referral -->
     <section id="screen-referral" class="screen">
       <div class="card">
-        <div style="font-weight: 700; font-size: 1.05rem;">Parrainage</div>
-        <div class="sub" id="ref-lock-info">Un compte ne peut être invité qu'une seule fois.</div>
+        <div style="font-weight: 700; font-size: 1.05rem;">Referral</div>
+        <div class="sub" id="ref-lock-info">An account can only be invited once.</div>
 
-        <div class="stat-box" style="margin-top: 12px;">
-          <div class="stat-label">Personnes parrainées</div>
+        <div class="stat-box" id="ref-box" style="margin-top: 12px;">
+          <div class="stat-label">Invited Friends</div>
           <div class="stat-value" id="ref-count">0</div>
         </div>
 
-        <div class="ref-link" id="my-ref-link">Chargement du lien...</div>
-        <button class="secondary" onclick="copyRefLink()">Copier mon lien de parrainage</button>
+        <div class="ref-link" id="my-ref-link">Loading link...</div>
+        <button class="secondary" onclick="copyRefLink()">Copy Referral Link</button>
       </div>
     </section>
 
-    <!-- ÉCRAN 4 (4e cercle droite) : Wallet & Compte Telegram -->
+    <!-- SCREEN 4: Wallet (TON Address Input Only Here) -->
     <section id="screen-wallet" class="screen">
       <div class="card">
-        <div style="font-weight: 700; font-size: 1.05rem;">Wallet & Compte Telegram</div>
-        <div class="sub" id="tg-account-status">Vérification du compte Telegram...</div>
+        <div style="font-weight: 700; font-size: 1.05rem;">Wallet</div>
+        <div class="sub" id="tg-account-status">Checking Telegram account...</div>
 
-        <button class="secondary" onclick="openRealTelegramAccount()">
-          Ouvrir / vérifier mon compte Telegram
+        <div class="wallet-box" id="connected-wallet-display">
+          No TON wallet connected yet.
+        </div>
+
+        <button class="ton-btn" onclick="connectTelegramTonWallet()">
+          Add / Connect TON Wallet
         </button>
 
-        <div style="margin-top: 14px; font-weight: 700;">Adresse TON pour l'airdrop</div>
-        <div class="sub">Enregistre ton adresse TON (UQ... ou EQ...) liée à ton compte.</div>
-        <input id="wallet-input" type="text" placeholder="Ex. UQ..." />
-        <button onclick="saveWalletAddress()">Enregistrer l'adresse TON</button>
+        <button id="disconnect-wallet-btn" class="secondary" onclick="disconnectTonWallet()" style="display:none;">
+          Disconnect Wallet
+        </button>
+
+        <div style="margin-top: 16px; font-weight: 700; font-size: 0.9rem;">Enter TON Address</div>
+        <input id="wallet-input" type="text" placeholder="Enter a TON address (UQ... or EQ...)" />
+        <button class="secondary" onclick="saveWalletAddress()">Save TON Address</button>
       </div>
     </section>
 
@@ -381,22 +566,22 @@
     </div>
   </div>
 
-  <!-- 4 cercles : 1. Tâches | 2. Principal TON (Minage) | 3. Parrainage | 4. Wallet -->
-  <nav class="bottom-dock" aria-label="Navigation principale">
+  <!-- 4 Circles: 1. Tasks | 2. Main $HOGS (Mining) | 3. Referral | 4. Wallet -->
+  <nav class="bottom-dock" aria-label="Main Navigation">
     <div class="dock-inner">
       <button id="tab-tasks" class="circle-tab" onclick="switchCircle('tasks')">
         <div class="circle-btn">✓</div>
-        <span>Tâches</span>
+        <span>Tasks</span>
       </button>
 
       <button id="tab-mining" class="circle-tab active" onclick="switchCircle('mining')">
-        <div class="circle-btn ton-main">♦</div>
-        <span>Minage</span>
+        <div class="circle-btn hogs-main">🪙</div>
+        <span>Mining</span>
       </button>
 
       <button id="tab-referral" class="circle-tab" onclick="switchCircle('referral')">
         <div class="circle-btn">👥</div>
-        <span>Parrainage</span>
+        <span>Referral</span>
       </button>
 
       <button id="tab-wallet" class="circle-tab" onclick="switchCircle('wallet')">
@@ -409,17 +594,57 @@
   <script>
     const HOGS_WORKER_URL = "https://hogs-verify.kevinngabena.workers.dev/";
     const MINI_APP_URL = "https://ngabena2035.github.io/Hogs/";
+    const TON_MANIFEST_URL = "https://ngabena2035.github.io/Hogs/tonconnect-manifest.json";
     const COMMUNITY_USERNAME = "COMMUNAUTE_HOGS";
     const MINING_COOLDOWN_MS = 3 * 60 * 60 * 1000;
     const MINING_REWARD_HG = 200;
     const TASK_REWARD_POINTS = 50;
-
-    // Tu peux ajouter d'autres tâches ici facilement : { id, title, desc, points, url }
     const EXTRA_TASKS = [];
 
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
+    }
+
+    function triggerHaptic(type = "light") {
+      try {
+        const hf = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback;
+        if (!hf) return;
+        if (type === "success") {
+          hf.notificationOccurred("success");
+        } else {
+          hf.impactOccurred("light");
+        }
+      } catch (e) {}
+    }
+
+    function playRewardAnimation(text, boxId) {
+      const floatEl = document.getElementById("float-reward");
+      const logoEl = document.getElementById("hogs-mining-logo");
+
+      if (floatEl) {
+        floatEl.textContent = text;
+        floatEl.classList.remove("show");
+        void floatEl.offsetWidth;
+        floatEl.classList.add("show");
+      }
+
+      if (logoEl) {
+        logoEl.classList.remove("claim-burst");
+        void logoEl.offsetWidth;
+        logoEl.classList.add("claim-burst");
+      }
+
+      if (boxId) {
+        const box = document.getElementById(boxId);
+        if (box) {
+          box.classList.remove("bump");
+          void box.offsetWidth;
+          box.classList.add("bump");
+        }
+      }
+
+      triggerHaptic("success");
     }
 
     function getHogsPlayerIdentity() {
@@ -458,7 +683,66 @@
       referralCount: Number(localStorage.getItem("hogs_referral_count") || "0")
     };
 
+    let tonConnectUI = null;
+    if (window.TON_CONNECT_UI && window.TON_CONNECT_UI.TonConnectUI) {
+      tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: TON_MANIFEST_URL,
+        actionsConfiguration: {
+          twaReturnUrl: "https://t.me"
+        }
+      });
+
+      tonConnectUI.onStatusChange(async (wallet) => {
+        if (wallet && wallet.account && wallet.account.address) {
+          const userFriendlyAddr = window.TON_CONNECT_UI.toUserFriendlyAddress
+            ? window.TON_CONNECT_UI.toUserFriendlyAddress(wallet.account.address)
+            : wallet.account.address;
+
+          state.walletAddress = userFriendlyAddr;
+          saveLocalState();
+          renderUI();
+          triggerHaptic("success");
+          await syncHogsProgress({ walletAddress: state.walletAddress });
+          setStatus("TON wallet connected and saved for the airdrop!");
+        }
+      });
+    }
+
+    async function connectTelegramTonWallet() {
+      triggerHaptic("light");
+      setStatus("Opening your TON wallet...");
+      try {
+        if (tonConnectUI && typeof tonConnectUI.openModal === "function") {
+          await tonConnectUI.openModal();
+        } else if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+          window.Telegram.WebApp.openTelegramLink("https://t.me/wallet");
+        } else {
+          window.open("https://t.me/wallet", "_blank");
+        }
+      } catch (err) {
+        console.error("TON connection error:", err);
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+          window.Telegram.WebApp.openTelegramLink("https://t.me/wallet");
+        }
+      }
+    }
+
+    async function disconnectTonWallet() {
+      triggerHaptic("light");
+      try {
+        if (tonConnectUI && tonConnectUI.connected) {
+          await tonConnectUI.disconnect();
+        }
+      } catch (e) {}
+      state.walletAddress = "";
+      saveLocalState();
+      renderUI();
+      await syncHogsProgress({ walletAddress: "" });
+      setStatus("TON wallet disconnected.");
+    }
+
     function switchCircle(tabName) {
+      triggerHaptic("light");
       const map = {
         tasks: "screen-tasks",
         mining: "screen-mining",
@@ -467,8 +751,15 @@
       };
 
       Object.keys(map).forEach((key) => {
-        document.getElementById(map[key]).classList.toggle("active", key === tabName);
-        document.getElementById("tab-" + key).classList.toggle("active", key === tabName);
+        const screenEl = document.getElementById(map[key]);
+        const tabEl = document.getElementById("tab-" + key);
+        const isActive = key === tabName;
+        screenEl.classList.remove("active");
+        if (isActive) {
+          void screenEl.offsetWidth;
+          screenEl.classList.add("active");
+        }
+        tabEl.classList.toggle("active", isActive);
       });
     }
 
@@ -498,7 +789,7 @@
           <div style="font-weight: 700;">${task.title}</div>
           <div class="sub">${task.desc} (+${task.points} Points)</div>
           <button ${done ? "disabled" : ""} onclick="completeExtraTask('${task.id}', ${task.points}, '${task.url || ""}')">
-            ${done ? "Tâche validée" : "Valider la tâche (+" + task.points + " Points)"}
+            ${done ? "Task Completed" : "Complete Task (+" + task.points + " Points)"}
           </button>
         `;
         container.appendChild(box);
@@ -518,17 +809,18 @@
       state.points += Number(pts || 0);
       saveLocalState();
       renderUI();
+      playRewardAnimation(`+${pts} Points`, "points-box");
       await syncHogsProgress({
         minedTokens: state.minedTokens,
         points: state.points,
         completedTasks: state.completedTasks
       });
-      setStatus(`Tâche validée ! +${pts} Points ajoutés.`);
+      setStatus(`Task completed! +${pts} Points added.`);
     }
 
     function renderUI() {
       document.getElementById("player-greeting").textContent =
-        `Connecté : ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""}`;
+        `Connected: ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""}`;
       document.getElementById("mined-hg-total").textContent = `${state.minedTokens} $HG`;
       document.getElementById("points-value").textContent = state.points;
       document.getElementById("tasks-count").textContent = state.completedTasks.length;
@@ -537,50 +829,41 @@
       const tgStatusEl = document.getElementById("tg-account-status");
       if (identity.isTelegramVerified) {
         tgStatusEl.textContent =
-          `Compte Telegram vérifié : ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""} — ID ${identity.userId}`;
+          `Telegram Account: ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""} — ID ${identity.userId}`;
       } else {
         tgStatusEl.textContent =
-          "Ouvre l'application directement depuis Telegram pour lier ton vrai compte Telegram.";
+          "Open the Mini App from Telegram to link your Telegram account.";
       }
 
+      const walletDisplay = document.getElementById("connected-wallet-display");
+      const disconnectBtn = document.getElementById("disconnect-wallet-btn");
       if (state.walletAddress) {
+        walletDisplay.textContent = `Linked TON Wallet: ${state.walletAddress}`;
         document.getElementById("wallet-input").value = state.walletAddress;
+        disconnectBtn.style.display = "block";
+      } else {
+        walletDisplay.textContent = "No TON wallet connected yet.";
+        disconnectBtn.style.display = "none";
       }
 
-      // Lien ouvrant directement la Mini App sur Telegram (avec fallback startapp)
-      const directTgAppUrl = `https://t.me/share/url?url=${encodeURIComponent(
-        MINI_APP_URL + "?startapp=" + encodeURIComponent(identity.refCode)
-      )}&text=${encodeURIComponent("Rejoins HOGS ($HG) et mine des $HG toutes les 3h !")}`;
       document.getElementById("my-ref-link").textContent =
         `${MINI_APP_URL}?startapp=${encodeURIComponent(identity.refCode)}`;
-      window.__HOGS_SHARE_URL__ = directTgAppUrl;
 
       const lockInfo = document.getElementById("ref-lock-info");
       if (state.referredBy) {
-        lockInfo.textContent = `Invitation verrouillée par : ${state.referredBy} (un seul parrain par compte).`;
+        lockInfo.textContent = `Invite locked by: ${state.referredBy} (one referrer per account).`;
       } else {
-        lockInfo.textContent = "Un compte ne peut être invité qu'une seule fois.";
+        lockInfo.textContent = "An account can only be invited once.";
       }
 
       const taskBtn = document.getElementById("verify-task-btn");
       if (state.completedTasks.includes("join_community")) {
-        taskBtn.textContent = "Tâche communautaire validée";
+        taskBtn.textContent = "Community Task Verified";
         taskBtn.disabled = true;
       }
 
       renderExtraTasks();
       updateMiningTimer();
-    }
-
-    function openRealTelegramAccount() {
-      const targetUrl = identity.username
-        ? `https://t.me/${identity.username}`
-        : "https://t.me/";
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-        window.Telegram.WebApp.openTelegramLink(targetUrl);
-      } else {
-        window.open(targetUrl, "_blank");
-      }
     }
 
     function updateMiningTimer() {
@@ -590,14 +873,14 @@
 
       if (remaining <= 0) {
         mineBtn.disabled = false;
-        timerEl.textContent = "Cycle de 3h terminé : réclame tes 200 $HG !";
+        timerEl.textContent = "3h cycle complete: claim your 200 $HG!";
       } else {
         mineBtn.disabled = true;
         const totalSec = Math.ceil(remaining / 1000);
         const h = Math.floor(totalSec / 3600);
         const m = Math.floor((totalSec % 3600) / 60);
         const s = totalSec % 60;
-        timerEl.textContent = `Prochain cycle (200 $HG) dans ${h}h ${m}m ${s}s`;
+        timerEl.textContent = `Next cycle (200 $HG) in ${h}h ${m}m ${s}s`;
       }
     }
 
@@ -611,7 +894,7 @@
         firstName: currentIdentity.firstName,
         refCode: currentIdentity.refCode,
         referredBy: referredBy || localStorage.getItem("hogs_referred_by") || "",
-        walletAddress: walletAddress || localStorage.getItem("hogs_wallet_address") || "",
+        walletAddress: walletAddress !== undefined ? walletAddress : (localStorage.getItem("hogs_wallet_address") || ""),
         minedTokens: Number(minedTokens !== undefined ? minedTokens : state.minedTokens),
         points: Number(points !== undefined ? points : state.points),
         completedTasks: Array.isArray(completedTasks) ? completedTasks : state.completedTasks
@@ -625,7 +908,7 @@
         });
         return await response.json();
       } catch (err) {
-        console.error("Erreur progress_sync:", err);
+        console.error("progress_sync error:", err);
         return { ok: false };
       }
     }
@@ -636,15 +919,17 @@
       state.lastMineAt = Date.now();
       saveLocalState();
       renderUI();
-      setStatus(`+${MINING_REWARD_HG} $HG minés ! Synchronisation en cours...`);
+      playRewardAnimation(`+${MINING_REWARD_HG} $HG`, "mined-total-box");
+      setStatus(`+${MINING_REWARD_HG} $HG mined! Syncing...`);
 
       const res = await syncHogsProgress({ minedTokens: state.minedTokens });
       if (res && res.ok) {
-        setStatus(`+${MINING_REWARD_HG} $HG enregistrés sur ta fiche joueur.`);
+        setStatus(`+${MINING_REWARD_HG} $HG saved to your player profile.`);
       }
     }
 
     function openCommunity() {
+      triggerHaptic("light");
       const url = `https://t.me/${COMMUNITY_USERNAME}`;
       if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
         window.Telegram.WebApp.openTelegramLink(url);
@@ -655,7 +940,8 @@
 
     async function verifyCommunityTask() {
       if (state.completedTasks.includes("join_community")) return;
-      setStatus("Vérification de l'adhésion au groupe...");
+      triggerHaptic("light");
+      setStatus("Verifying group membership...");
 
       try {
         const response = await fetch(HOGS_WORKER_URL, {
@@ -673,17 +959,18 @@
           state.points += TASK_REWARD_POINTS;
           saveLocalState();
           renderUI();
+          playRewardAnimation(`+${TASK_REWARD_POINTS} Points`, "points-box");
           await syncHogsProgress({
             minedTokens: state.minedTokens,
             points: state.points,
             completedTasks: state.completedTasks
           });
-          setStatus(`Adhésion confirmée ! +${TASK_REWARD_POINTS} Points ajoutés.`);
+          setStatus(`Membership confirmed! +${TASK_REWARD_POINTS} Points added.`);
         } else {
-          setStatus(`Abonnement non détecté (${data.status || "vérifie le groupe"}).`);
+          setStatus(`Membership not detected (${data.status || "check the group"}).`);
         }
       } catch (err) {
-        setStatus("Erreur lors de la vérification de la tâche.");
+        setStatus("Error while verifying the task.");
       }
     }
 
@@ -719,20 +1006,22 @@
           await syncHogsProgress({ referredBy: state.referredBy });
         }
       } catch (err) {
-        console.error("Erreur referral_sync:", err);
+        console.error("referral_sync error:", err);
       }
     }
 
     function copyRefLink() {
+      triggerHaptic("light");
       const text = document.getElementById("my-ref-link").textContent;
       navigator.clipboard?.writeText(text);
-      setStatus("Lien de parrainage copié !");
+      setStatus("Referral link copied!");
     }
 
     async function saveWalletAddress() {
+      triggerHaptic("light");
       const val = document.getElementById("wallet-input").value.trim();
       if (!val || val.length < 20) {
-        setStatus("Entre une adresse TON valide (UQ... ou EQ...).");
+        setStatus("Enter a valid TON address (UQ... or EQ...).");
         return;
       }
       state.walletAddress = val;
@@ -741,9 +1030,9 @@
 
       const res = await syncHogsProgress({ walletAddress: state.walletAddress });
       if (res && res.ok) {
-        setStatus("Adresse TON enregistrée et liée à ton compte Telegram pour l'airdrop.");
+        setStatus("TON address saved for the airdrop.");
       } else {
-        setStatus("Adresse TON sauvegardée localement.");
+        setStatus("TON address saved locally.");
       }
     }
 
