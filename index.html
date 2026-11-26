@@ -492,6 +492,7 @@
         </div>
 
         <div id="custom-tasks-list"></div>
+        <div class="status" id="tasks-status-msg"></div>
       </div>
     </section>
 
@@ -517,6 +518,7 @@
 
           <div class="sub" id="mine-timer">3h cycle: mine 200 $HG every 3 hours</div>
           <button id="mine-btn" onclick="claimMining()">Claim Mining (+200 $HG)</button>
+          <div class="status" id="mining-status-msg"></div>
         </div>
       </div>
     </section>
@@ -534,10 +536,11 @@
 
         <div class="ref-link" id="my-ref-link">Loading link...</div>
         <button class="secondary" onclick="copyRefLink()">Copy Referral Link</button>
+        <div class="status" id="referral-status-msg"></div>
       </div>
     </section>
 
-    <!-- SCREEN 4: Wallet (TON Address Input Only Here) -->
+    <!-- SCREEN 4: Wallet (TON Wallet & Status Only Here) -->
     <section id="screen-wallet" class="screen">
       <div class="card">
         <div style="font-weight: 700; font-size: 1.05rem;">Wallet</div>
@@ -558,12 +561,9 @@
         <div style="margin-top: 16px; font-weight: 700; font-size: 0.9rem;">Enter TON Address</div>
         <input id="wallet-input" type="text" placeholder="Enter a TON address (UQ... or EQ...)" />
         <button class="secondary" onclick="saveWalletAddress()">Save TON Address</button>
+        <div class="status" id="wallet-status-msg"></div>
       </div>
     </section>
-
-    <div class="card" style="padding: 12px 16px;">
-      <div class="status" id="status-msg" style="margin-top: 0;"></div>
-    </div>
   </div>
 
   <!-- 4 Circles: 1. Tasks | 2. Main $HOGS (Mining) | 3. Referral | 4. Wallet -->
@@ -703,14 +703,14 @@
           renderUI();
           triggerHaptic("success");
           await syncHogsProgress({ walletAddress: state.walletAddress });
-          setStatus("TON wallet connected and saved for the airdrop!");
+          setStatus("TON wallet connected and saved for the airdrop!", "wallet");
         }
       });
     }
 
     async function connectTelegramTonWallet() {
       triggerHaptic("light");
-      setStatus("Opening your TON wallet...");
+      setStatus("Opening your TON wallet...", "wallet");
       try {
         if (tonConnectUI && typeof tonConnectUI.openModal === "function") {
           await tonConnectUI.openModal();
@@ -738,7 +738,7 @@
       saveLocalState();
       renderUI();
       await syncHogsProgress({ walletAddress: "" });
-      setStatus("TON wallet disconnected.");
+      setStatus("TON wallet disconnected.", "wallet");
     }
 
     function switchCircle(tabName) {
@@ -763,8 +763,15 @@
       });
     }
 
-    function setStatus(msg) {
-      document.getElementById("status-msg").textContent = msg;
+    function setStatus(msg, section = "mining") {
+      const targetMap = {
+        tasks: "tasks-status-msg",
+        mining: "mining-status-msg",
+        referral: "referral-status-msg",
+        wallet: "wallet-status-msg"
+      };
+      const el = document.getElementById(targetMap[section] || "mining-status-msg");
+      if (el) el.textContent = msg;
     }
 
     function saveLocalState() {
@@ -815,7 +822,7 @@
         points: state.points,
         completedTasks: state.completedTasks
       });
-      setStatus(`Task completed! +${pts} Points added.`);
+      setStatus(`Task completed! +${pts} Points added.`, "tasks");
     }
 
     function renderUI() {
@@ -920,11 +927,11 @@
       saveLocalState();
       renderUI();
       playRewardAnimation(`+${MINING_REWARD_HG} $HG`, "mined-total-box");
-      setStatus(`+${MINING_REWARD_HG} $HG mined! Syncing...`);
+      setStatus(`+${MINING_REWARD_HG} $HG mined! Syncing...`, "mining");
 
       const res = await syncHogsProgress({ minedTokens: state.minedTokens });
       if (res && res.ok) {
-        setStatus(`+${MINING_REWARD_HG} $HG saved to your player profile.`);
+        setStatus(`+${MINING_REWARD_HG} $HG saved to your player profile.`, "mining");
       }
     }
 
@@ -941,7 +948,7 @@
     async function verifyCommunityTask() {
       if (state.completedTasks.includes("join_community")) return;
       triggerHaptic("light");
-      setStatus("Verifying group membership...");
+      setStatus("Verifying group membership...", "tasks");
 
       try {
         const response = await fetch(HOGS_WORKER_URL, {
@@ -965,12 +972,12 @@
             points: state.points,
             completedTasks: state.completedTasks
           });
-          setStatus(`Membership confirmed! +${TASK_REWARD_POINTS} Points added.`);
+          setStatus(`Membership confirmed! +${TASK_REWARD_POINTS} Points added.`, "tasks");
         } else {
-          setStatus(`Membership not detected (${data.status || "check the group"}).`);
+          setStatus(`Membership not detected (${data.status || "check the group"}).`, "tasks");
         }
       } catch (err) {
-        setStatus("Error while verifying the task.");
+        setStatus("Error while verifying the task.", "tasks");
       }
     }
 
@@ -1014,14 +1021,14 @@
       triggerHaptic("light");
       const text = document.getElementById("my-ref-link").textContent;
       navigator.clipboard?.writeText(text);
-      setStatus("Referral link copied!");
+      setStatus("Referral link copied!", "referral");
     }
 
     async function saveWalletAddress() {
       triggerHaptic("light");
       const val = document.getElementById("wallet-input").value.trim();
       if (!val || val.length < 20) {
-        setStatus("Enter a valid TON address (UQ... or EQ...).");
+        setStatus("Enter a valid TON address (UQ... or EQ...).", "wallet");
         return;
       }
       state.walletAddress = val;
@@ -1030,9 +1037,9 @@
 
       const res = await syncHogsProgress({ walletAddress: state.walletAddress });
       if (res && res.ok) {
-        setStatus("TON address saved for the airdrop.");
+        setStatus("TON address saved for the airdrop.", "wallet");
       } else {
-        setStatus("TON address saved locally.");
+        setStatus("TON address saved locally.", "wallet");
       }
     }
 
