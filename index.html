@@ -737,7 +737,23 @@
     const MINING_COOLDOWN_MS = 3 * 60 * 60 * 1000;
     const MINING_REWARD_HG = 200;
     const TASK_REWARD_POINTS = 50;
-    const EXTRA_TASKS = [];
+
+    // Ajoute ici tes nouvelles tâches :
+    // - type: "telegram_chat" -> vérifie l'appartenance via getChatMember (chatUsername requis)
+    // - type: "link_visit" -> exige l'ouverture du lien avant validation (url requis)
+    const EXTRA_TASKS = [
+      {
+        id: "tg_hogs_announcements",
+        title: "Official $HG Announcements Channel",
+        description: "Join the announcements channel and verify membership (+50 Points).",
+        type: "telegram_chat",
+        chatUsername: "COMMUNAUTE_HOGS",
+        url: "https://t.me/COMMUNAUTE_HOGS",
+        rewardPoints: 50
+      }
+    ];
+
+    const openedTaskLinks = new Set();
 
     const TIER_STEP = 5_000_000;
     const TIER_MAX_CAP = 1_000_000_000;
@@ -935,6 +951,67 @@
       return `${h}h ${m}m ${s}s`;
     }
 
+    function openExternalUrl(url, taskId = "") {
+      triggerHaptic("light");
+      if (!url) return;
+      if (taskId) {
+        openedTaskLinks.add(taskId);
+      }
+      if (url.startsWith("https://t.me/") && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(url);
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    }
+
+    function renderTasksState() {
+      const mainVerifyBtn = document.getElementById("verify-task-btn");
+      if (mainVerifyBtn) {
+        const done = state.completedTasks.includes("tg_community");
+        mainVerifyBtn.disabled = done;
+        mainVerifyBtn.textContent = done
+          ? "Completed ✓ (+50 Points)"
+          : `Verify Task (+${TASK_REWARD_POINTS} Points)`;
+      }
+
+      const listEl = document.getElementById("custom-tasks-list");
+      if (!listEl) return;
+
+      listEl.innerHTML = "";
+      EXTRA_TASKS.forEach((task) => {
+        const isDone = state.completedTasks.includes(task.id);
+        const pts = Number(task.rewardPoints || TASK_REWARD_POINTS);
+        const actionLabel = task.type === "telegram_chat" ? "Open Channel / Group" : "Open Task Link";
+
+        const item = document.createElement("div");
+        item.className = "task-item";
+
+        const titleDiv = document.createElement("div");
+        titleDiv.style.fontWeight = "700";
+        titleDiv.textContent = task.title;
+
+        const descDiv = document.createElement("div");
+        descDiv.className = "sub";
+        descDiv.textContent = task.description;
+
+        const openBtn = document.createElement("button");
+        openBtn.className = "secondary";
+        openBtn.textContent = actionLabel;
+        openBtn.onclick = () => openExternalUrl(task.url, task.id);
+
+        const verifyBtn = document.createElement("button");
+        verifyBtn.disabled = isDone;
+        verifyBtn.textContent = isDone ? `Completed ✓ (+${pts} Points)` : `Verify Task (+${pts} Points)`;
+        verifyBtn.onclick = () => verifyExtraTask(task.id);
+
+        item.appendChild(titleDiv);
+        item.appendChild(descDiv);
+        if (task.url) item.appendChild(openBtn);
+        item.appendChild(verifyBtn);
+        listEl.appendChild(item);
+      });
+    }
+
     function renderUI() {
       const greetingEl = document.getElementById("player-greeting");
       if (greetingEl) {
@@ -981,6 +1058,7 @@
           : `Next cycle (+${MINING_REWARD_HG} $HG) in ${formatRemaining(MINING_COOLDOWN_MS - elapsed)}`;
       }
 
+      renderTasksState();
       updateMilestoneProgress(state.minedTokens);
     }
 
@@ -1008,13 +1086,39 @@
     }
 
     function openCommunity() {
-      triggerHaptic("light");
-      const url = `https://t.me/${COMMUNITY_USERNAME}`;
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-        window.Telegram.WebApp.openTelegramLink(url);
-      } else {
-        window.open(url, "_blank", "noopener,noreferrer");
+      openExternalUrl(`https://t.me/${COMMUNITY_USERNAME}`, "tg_community");
+    }
+
+    async function checkTelegramMembership(chatUsername) {
+      const cleanUsername = String(chatUsername || "").replace(/^@/, "").trim();
+      if (!cleanUsername) {
+        return { ok: false, isMember: false, error: "Missing chatUsername" };
       }
+      const res = await fetch(HOGS_WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatUsername: cleanUsername,
+          userId: identity.userId
+        })
+      });
+      return await res.json();
+    }
+
+    async function completeTaskReward(taskId, rewardPoints, successMessage) {
+      const statusEl = document.getElementById("tasks-status-msg");
+      if (state.completedTasks.includes(taskId)) {
+        if (statusEl) statusEl.textContent = "Task already completed.";
+        return;
+      }
+
+      state.completedTasks.push(taskId);
+      state.points += rewardPoints;
+      saveLocalState();
+      renderUI();
+      playRewardAnimation(`+${rewardPoints} PTS`, "points-box");
+      if (statusEl) statusEl.textContent = successMessage;
+      await syncHogsProgress({ points: state.points, completedTasks: state.completedTasks });
     }
 
     async function verifyCommunityTask() {
@@ -1026,28 +1130,58 @@
       }
 
       try {
-        const res = await fetch(HOGS_WORKER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chatUsername: COMMUNITY_USERNAME,
-            userId: identity.userId
-          })
-        });
-        const data = await res.json();
-        if (!data || !data.isMember) {
+        const data = await checkTelegramMembership(COMMUNITY_USERNAME);
+        if (!data || !data.ok || !data.isMember) {
           if (statusEl) statusEl.textContent = "Join the Telegram group/channel first, then verify.";
           return;
         }
-      } catch (err) {}
+      } catch (err) {
+        if (statusEl) statusEl.textContent = "Verification error. Please try again.";
+        return;
+      }
 
-      state.completedTasks.push(taskId);
-      state.points += TASK_REWARD_POINTS;
-      saveLocalState();
-      renderUI();
-      playRewardAnimation(`+${TASK_REWARD_POINTS} PTS`, "points-box");
-      if (statusEl) statusEl.textContent = `Task verified! +${TASK_REWARD_POINTS} Points.`;
-      await syncHogsProgress({ points: state.points, completedTasks: state.completedTasks });
+      await completeTaskReward(
+        taskId,
+        TASK_REWARD_POINTS,
+        `Task verified! +${TASK_REWARD_POINTS} Points.`
+      );
+    }
+
+    async function verifyExtraTask(taskId) {
+      const statusEl = document.getElementById("tasks-status-msg");
+      const task = EXTRA_TASKS.find((t) => t.id === taskId);
+      if (!task) return;
+
+      if (state.completedTasks.includes(task.id)) {
+        if (statusEl) statusEl.textContent = "Task already completed.";
+        return;
+      }
+
+      const rewardPoints = Number(task.rewardPoints || TASK_REWARD_POINTS);
+
+      if (task.type === "telegram_chat") {
+        try {
+          const data = await checkTelegramMembership(task.chatUsername);
+          if (!data || !data.ok || !data.isMember) {
+            if (statusEl) statusEl.textContent = "Join the Telegram channel/group first, then verify.";
+            return;
+          }
+        } catch (err) {
+          if (statusEl) statusEl.textContent = "Verification error. Please try again.";
+          return;
+        }
+      } else {
+        if (task.url && !openedTaskLinks.has(task.id)) {
+          if (statusEl) statusEl.textContent = "Open the task link first, then click Verify.";
+          return;
+        }
+      }
+
+      await completeTaskReward(
+        task.id,
+        rewardPoints,
+        `${task.title} verified! +${rewardPoints} Points.`
+      );
     }
 
     function copyRefLink() {
