@@ -1087,8 +1087,15 @@
           if (data.lockedReferrer) {
             state.referredBy = data.lockedReferrer;
           }
-          if (data.profile && typeof data.profile.minedTokens === "number") {
-            state.minedTokens = Math.max(state.minedTokens, data.profile.minedTokens);
+          if (data.profile) {
+            if (typeof data.profile.minedTokens === "number") {
+              state.minedTokens = Math.max(state.minedTokens, data.profile.minedTokens);
+            }
+            if (typeof data.profile.walletAddress === "string" && data.profile.walletAddress.trim() !== "") {
+              if (!state.walletAddress || !extra.walletAddress) {
+                state.walletAddress = data.profile.walletAddress.trim();
+              }
+            }
           }
           saveLocalState();
           renderUI();
