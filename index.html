@@ -738,21 +738,23 @@
     const MINING_REWARD_HG = 200;
     const TASK_REWARD_POINTS = 50;
     const CERTIFIED_TASK_HIDE_MS = 60 * 1000; // 1 minute APRÈS certification effective
+    const STATUS_MESSAGE_DURATION_MS = 20 * 1000; // 20 secondes max à l'écran
 
-    // Remplace chatUsername par le @username public du canal (sans @) si disponible, ou garde le lien d'invitation privé dans url
+    // Channel: "HOGS announcement" (https://t.me/hogs_announcement)
     const EXTRA_TASKS = [
       {
         id: "tg_hogs_announcements",
-        title: "Official $HG Announcements Channel",
-        description: "Join the announcements channel and verify membership (+50 Points). Disappears 1 min after verified join.",
+        title: "HOGS announcement",
+        description: "Join the HOGS announcement channel and verify membership (+50 Points). Disappears 1 min after verified join.",
         type: "telegram_chat",
-        chatUsername: "",
-        url: "https://t.me/+PL7DklN3JYw0OWM0",
+        chatUsername: "hogs_announcement",
+        url: "https://t.me/hogs_announcement",
         rewardPoints: 50
       }
     ];
 
     const openedTaskLinks = new Set();
+    const statusTimers = {};
 
     const TIER_STEP = 5_000_000;
     const TIER_MAX_CAP = 1_000_000_000;
@@ -760,6 +762,25 @@
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
+    }
+
+    function setStatusMessage(elementId, message, durationMs = STATUS_MESSAGE_DURATION_MS) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      if (statusTimers[elementId]) {
+        clearTimeout(statusTimers[elementId]);
+        statusTimers[elementId] = null;
+      }
+
+      el.textContent = message || "";
+
+      if (message && durationMs > 0) {
+        statusTimers[elementId] = setTimeout(() => {
+          el.textContent = "";
+          statusTimers[elementId] = null;
+        }, durationMs);
+      }
     }
 
     function triggerHaptic(type = "light") {
@@ -921,7 +942,6 @@
       referralCount: Number(localStorage.getItem("hogs_referral_count") || "0")
     };
 
-    // Enregistre l'instant précis où une tâche a été CERTIFIÉE accomplie
     let certifiedAtByTaskId = JSON.parse(
       localStorage.getItem("hogs_certified_task_times") || "{}"
     );
@@ -1105,12 +1125,12 @@
     }
 
     async function claimMining() {
-      const statusEl = document.getElementById("mining-status-msg");
       const elapsed = Date.now() - state.lastMineAt;
       if (state.lastMineAt && elapsed < MINING_COOLDOWN_MS) {
-        if (statusEl) {
-          statusEl.textContent = `Wait ${formatRemaining(MINING_COOLDOWN_MS - elapsed)} before next claim.`;
-        }
+        setStatusMessage(
+          "mining-status-msg",
+          `Wait ${formatRemaining(MINING_COOLDOWN_MS - elapsed)} before next claim.`
+        );
         return;
       }
 
@@ -1120,9 +1140,7 @@
       renderUI();
       playRewardAnimation(`+${MINING_REWARD_HG} $HG`, "mined-total-box");
 
-      if (statusEl) {
-        statusEl.textContent = `Claimed +${MINING_REWARD_HG} $HG!`;
-      }
+      setStatusMessage("mining-status-msg", `Claimed +${MINING_REWARD_HG} $HG!`);
 
       await syncHogsProgress({ minedTokens: state.minedTokens });
     }
@@ -1147,11 +1165,9 @@
       return await res.json();
     }
 
-    // Appelé UNIQUEMENT après certification réelle de la tâche
     async function finalizeCertifiedTask(taskId, rewardPoints, successMessage) {
-      const statusEl = document.getElementById("tasks-status-msg");
       if (state.completedTasks.includes(taskId)) {
-        if (statusEl) statusEl.textContent = "Task already certified.";
+        setStatusMessage("tasks-status-msg", "Task already certified.");
         return;
       }
 
@@ -1161,26 +1177,25 @@
       saveLocalState();
       renderUI();
       playRewardAnimation(`+${rewardPoints} PTS`, "points-box");
-      if (statusEl) statusEl.textContent = successMessage;
+      setStatusMessage("tasks-status-msg", successMessage);
       await syncHogsProgress({ points: state.points, completedTasks: state.completedTasks });
     }
 
     async function verifyCommunityTask() {
       const taskId = "tg_community";
-      const statusEl = document.getElementById("tasks-status-msg");
       if (state.completedTasks.includes(taskId)) {
-        if (statusEl) statusEl.textContent = "Community task already completed.";
+        setStatusMessage("tasks-status-msg", "Community task already completed.");
         return;
       }
 
       try {
         const data = await checkTelegramMembership(COMMUNITY_USERNAME);
         if (!data || !data.ok || !data.isMember) {
-          if (statusEl) statusEl.textContent = "Not certified yet: join the Telegram group/channel first.";
+          setStatusMessage("tasks-status-msg", "Not certified yet: join the Telegram group/channel first.");
           return;
         }
       } catch (err) {
-        if (statusEl) statusEl.textContent = "Certification check failed. Please try again.";
+        setStatusMessage("tasks-status-msg", "Certification check failed. Please try again.");
         return;
       }
 
@@ -1192,12 +1207,11 @@
     }
 
     async function verifyExtraTask(taskId) {
-      const statusEl = document.getElementById("tasks-status-msg");
       const task = EXTRA_TASKS.find((t) => t.id === taskId);
       if (!task) return;
 
       if (state.completedTasks.includes(task.id)) {
-        if (statusEl) statusEl.textContent = "Task already completed.";
+        setStatusMessage("tasks-status-msg", "Task already completed.");
         return;
       }
 
@@ -1206,24 +1220,22 @@
       if (task.type === "telegram_chat") {
         const cleanChat = String(task.chatUsername || "").replace(/^@/, "").trim();
         if (!cleanChat) {
-          if (statusEl) {
-            statusEl.textContent = "Channel username is not set for automatic verification yet.";
-          }
+          setStatusMessage("tasks-status-msg", "Channel username is missing.");
           return;
         }
         try {
           const data = await checkTelegramMembership(cleanChat);
           if (!data || !data.ok || !data.isMember) {
-            if (statusEl) statusEl.textContent = "Not certified yet: join the announcements channel first.";
+            setStatusMessage("tasks-status-msg", "Not certified yet: join HOGS announcement first.");
             return;
           }
         } catch (err) {
-          if (statusEl) statusEl.textContent = "Certification check failed. Please try again.";
+          setStatusMessage("tasks-status-msg", "Certification check failed. Please try again.");
           return;
         }
       } else {
         if (task.url && !openedTaskLinks.has(task.id)) {
-          if (statusEl) statusEl.textContent = "Open the task link first, then verify.";
+          setStatusMessage("tasks-status-msg", "Open the task link first, then verify.");
           return;
         }
       }
@@ -1238,11 +1250,10 @@
     function copyRefLink() {
       triggerHaptic("light");
       const link = `${MINI_APP_URL}?ref=${identity.refCode}`;
-      const statusEl = document.getElementById("referral-status-msg");
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(link).catch(() => {});
       }
-      if (statusEl) statusEl.textContent = "Referral link copied!";
+      setStatusMessage("referral-status-msg", "Referral link copied!");
     }
 
     async function syncHogsProgress(extra = {}) {
