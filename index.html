@@ -575,12 +575,6 @@
         <button class="ton-btn" onclick="connectTelegramTonWallet()">
           Add / Connect TON Wallet
         </button>
-
-        <button id="disconnect-wallet-btn" class="secondary" onclick="disconnectTonWallet()" style="display:none;">
-          Disconnect Wallet
-        </button>
-
-        <div class="status" id="wallet-status-msg"></div>
       </div>
     </section>
   </div>
@@ -722,14 +716,12 @@
           renderUI();
           triggerHaptic("success");
           await syncHogsProgress({ walletAddress: state.walletAddress });
-          setStatus("TON wallet connected and saved for the airdrop!", "wallet");
         }
       });
     }
 
     async function connectTelegramTonWallet() {
       triggerHaptic("light");
-      setStatus("Opening your TON wallet...", "wallet");
       try {
         if (tonConnectUI && typeof tonConnectUI.openModal === "function") {
           await tonConnectUI.openModal();
@@ -744,20 +736,6 @@
           window.Telegram.WebApp.openTelegramLink("https://t.me/wallet");
         }
       }
-    }
-
-    async function disconnectTonWallet() {
-      triggerHaptic("light");
-      try {
-        if (tonConnectUI && tonConnectUI.connected) {
-          await tonConnectUI.disconnect();
-        }
-      } catch (e) {}
-      state.walletAddress = "";
-      saveLocalState();
-      renderUI();
-      await syncHogsProgress({ walletAddress: "" });
-      setStatus("TON wallet disconnected.", "wallet");
     }
 
     function switchCircle(tabName) {
@@ -786,8 +764,7 @@
       const targetMap = {
         tasks: "tasks-status-msg",
         mining: "mining-status-msg",
-        referral: "referral-status-msg",
-        wallet: "wallet-status-msg"
+        referral: "referral-status-msg"
       };
       const el = document.getElementById(targetMap[section] || "mining-status-msg");
       if (el) el.textContent = msg;
@@ -862,13 +839,10 @@
       }
 
       const walletDisplay = document.getElementById("connected-wallet-display");
-      const disconnectBtn = document.getElementById("disconnect-wallet-btn");
       if (state.walletAddress) {
         walletDisplay.textContent = `Linked TON Wallet: ${state.walletAddress}`;
-        disconnectBtn.style.display = "block";
       } else {
         walletDisplay.textContent = "No TON wallet connected yet.";
-        disconnectBtn.style.display = "none";
       }
 
       document.getElementById("my-ref-link").textContent =
