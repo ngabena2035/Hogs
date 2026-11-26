@@ -276,23 +276,6 @@
       box-shadow: 0 6px 18px rgba(0, 152, 234, 0.35);
     }
 
-    input {
-      width: 100%;
-      background: #0d131f;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      color: var(--text);
-      margin-top: 8px;
-      font-size: 0.9rem;
-      transition: border-color 0.2s ease;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
     .status {
       font-size: 0.85rem;
       color: var(--ok);
@@ -579,7 +562,7 @@
       </div>
     </section>
 
-    <!-- SCREEN 4: Wallet (TON Wallet & Status Only Here) -->
+    <!-- SCREEN 4: Wallet -->
     <section id="screen-wallet" class="screen">
       <div class="card">
         <div style="font-weight: 700; font-size: 1.05rem;">Wallet</div>
@@ -597,9 +580,6 @@
           Disconnect Wallet
         </button>
 
-        <div style="margin-top: 16px; font-weight: 700; font-size: 0.9rem;">Enter TON Address</div>
-        <input id="wallet-input" type="text" placeholder="Enter a TON address (UQ... or EQ...)" />
-        <button class="secondary" onclick="saveWalletAddress()">Save TON Address</button>
         <div class="status" id="wallet-status-msg"></div>
       </div>
     </section>
@@ -885,7 +865,6 @@
       const disconnectBtn = document.getElementById("disconnect-wallet-btn");
       if (state.walletAddress) {
         walletDisplay.textContent = `Linked TON Wallet: ${state.walletAddress}`;
-        document.getElementById("wallet-input").value = state.walletAddress;
         disconnectBtn.style.display = "block";
       } else {
         walletDisplay.textContent = "No TON wallet connected yet.";
@@ -1061,25 +1040,6 @@
       const text = document.getElementById("my-ref-link").textContent;
       navigator.clipboard?.writeText(text);
       setStatus("Referral link copied!", "referral");
-    }
-
-    async function saveWalletAddress() {
-      triggerHaptic("light");
-      const val = document.getElementById("wallet-input").value.trim();
-      if (!val || val.length < 20) {
-        setStatus("Enter a valid TON address (UQ... or EQ...).", "wallet");
-        return;
-      }
-      state.walletAddress = val;
-      saveLocalState();
-      renderUI();
-
-      const res = await syncHogsProgress({ walletAddress: state.walletAddress });
-      if (res && res.ok) {
-        setStatus("TON address saved for the airdrop.", "wallet");
-      } else {
-        setStatus("TON address saved locally.", "wallet");
-      }
     }
 
     setInterval(updateMiningTimer, 1000);
