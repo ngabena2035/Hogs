@@ -1,4 +1,687 @@
-if (typeof state.referralCount !== "number") state.referralCount = 0;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOGS ($HG) — Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @keyframes coinFloat {
+      0%, 100% {
+        transform: translateY(0px) scale(1);
+      }
+      50% {
+        transform: translateY(-6px) scale(1.02);
+      }
+    }
+
+    @keyframes haloPulse {
+      0%, 100% {
+        box-shadow: 0 0 18px rgba(245, 158, 11, 0.3), 0 0 38px rgba(245, 158, 11, 0.14);
+      }
+      50% {
+        box-shadow: 0 0 28px rgba(245, 158, 11, 0.58), 0 0 54px rgba(251, 191, 36, 0.24);
+      }
+    }
+
+    @keyframes panelFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes subtleShimmer {
+      0%, 100% {
+        border-color: rgba(245, 158, 11, 0.35);
+      }
+      50% {
+        border-color: rgba(251, 191, 36, 0.8);
+      }
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: radial-gradient(circle at top, #1b2234 0%, #111318 65%);
+      color: #ffffff;
+      margin: 0;
+      padding: 16px 16px 96px;
+      text-align: center;
+      min-height: 100vh;
+    }
+
+    .app-shell {
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+      animation: panelFadeIn 0.25s ease-out;
+    }
+
+    .card {
+      background: rgba(27, 31, 42, 0.96);
+      border: 1px solid #2b3245;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+
+    .coin-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0 6px;
+    }
+
+    .coin-circle-backdrop {
+      width: 168px;
+      height: 168px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.24) 0%, rgba(37, 43, 59, 0.85) 72%, rgba(245, 158, 11, 0.12) 100%);
+      border: 2px solid rgba(251, 191, 36, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 0 12px;
+      animation: coinFloat 3.2s ease-in-out infinite, haloPulse 2.8s ease-in-out infinite;
+    }
+
+    .coin-btn {
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.18s ease;
+    }
+
+    .coin-btn:active {
+      transform: scale(0.93);
+    }
+
+    .coin-btn img {
+      width: 138px;
+      height: 138px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      border: 3px solid #f59e0b;
+    }
+
+    .user-badge {
+      display: inline-block;
+      background: #252b3b;
+      color: #cbd5e1;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+      border: 1px solid #334155;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .stat-box {
+      flex: 1;
+      background: #252b3b;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 13px;
+      border: 1px solid #30384d;
+    }
+
+    .stat-box strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 16px;
+      color: #fbbf24;
+    }
+
+    .mining-box {
+      background: #23293a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      margin: 12px 0 4px;
+      text-align: center;
+      animation: subtleShimmer 3.5s ease-in-out infinite;
+    }
+
+    .timer-display {
+      font-family: monospace;
+      font-size: 28px;
+      font-weight: bold;
+      color: #fbbf24;
+      margin: 8px 0;
+      letter-spacing: 1px;
+    }
+
+    .section-title {
+      text-align: left;
+      font-size: 16px;
+      font-weight: bold;
+      margin: 0 0 12px;
+      color: #f8fafc;
+    }
+
+    .box {
+      background: #252b3b;
+      border: 1px solid #30384d;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 10px 0;
+      text-align: left;
+      word-break: break-all;
+      font-size: 13px;
+    }
+
+    .contract-text {
+      background: #171b24;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #fcd34d;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .text-input {
+      flex: 1;
+      background: #171b24;
+      color: #ffffff;
+      border: 1px solid #3b4661;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .text-input:focus {
+      border-color: #f59e0b;
+    }
+
+    .wallet-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+      background: #171b24;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      margin-top: 6px;
+    }
+
+    .wallet-pill.connected {
+      color: #34d399;
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.12);
+    }
+
+    .tasks-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .task {
+      background: #252b3b;
+      border: 1px solid #30384d;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: left;
+      transition: transform 0.18s ease, border-color 0.18s ease;
+    }
+
+    .task.completed-task {
+      border-color: rgba(16, 185, 129, 0.45);
+      background: #1e282d;
+    }
+
+    .task:hover {
+      transform: translateY(-2px);
+      border-color: #475569;
+    }
+
+    .task-badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: bold;
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+    }
+
+    .status-msg {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    button.action-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      color: #111318;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 13px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+      margin-right: 6px;
+      font-size: 13px;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    button.action-btn:hover:not(:disabled) {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    button.action-btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    button.btn-secondary {
+      background: #334155;
+      color: #ffffff;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(23, 26, 35, 0.98);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid #2b3245;
+      padding: 8px 10px;
+      z-index: 999;
+    }
+
+    .bottom-nav-inner {
+      max-width: 440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .nav-btn {
+      background: transparent;
+      color: #cbd5e1;
+      border: none;
+      border-radius: 12px;
+      padding: 6px 4px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-height: 54px;
+      transition: transform 0.15s ease, color 0.2s ease;
+    }
+
+    .nav-btn:active {
+      transform: scale(0.92);
+    }
+
+    .nav-icon-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #23293a;
+      border: 1.5px solid #364159;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.18s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    }
+
+    .nav-icon-svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      display: block;
+    }
+
+    .nav-btn:hover .nav-icon-circle {
+      transform: scale(1.06);
+      border-color: #f59e0b;
+      color: #fbbf24;
+    }
+
+    .nav-btn.active {
+      color: #fbbf24;
+    }
+
+    .nav-btn.active .nav-icon-circle {
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      color: #111318;
+      border-color: #fde68a;
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.65);
+      transform: translateY(-2px) scale(1.06);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .coin-circle-backdrop,
+      .mining-box,
+      .tab-panel.active {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- 1. TASKS : ENSEMBLE DES TÂCHES -->
+    <section id="panel-tasks" class="tab-panel">
+      <div class="card">
+        <div class="section-title">All Tasks & Community Session</div>
+        <div class="stat-box" style="margin-bottom: 12px; text-align: left;">
+          <div>Tasks Rewards Balance</div>
+          <strong>$<span id="task-balance">0</span></strong>
+        </div>
+        <div id="tasks-container" class="tasks-grid"></div>
+      </div>
+    </section>
+
+    <!-- 2. CENTRE : COIN & MINING -->
+    <section id="panel-mining" class="tab-panel active">
+      <div class="card">
+        <div id="user-badge" class="user-badge">Member: Guest</div>
+        <div class="coin-hero">
+          <div class="coin-circle-backdrop">
+            <button class="coin-btn" type="button" onclick="handleCoinTap()" title="HOGS Coin">
+              <img src="1795313325197.jpg" alt="HOGS Coin" />
+            </button>
+          </div>
+          <h1 style="margin: 4px 0;">HOGS ($HG)</h1>
+          <div class="status-msg">Tap the coin or start your 3-hour mining session.</div>
+        </div>
+
+        <div class="mining-box">
+          <div><strong>Mining Session (every 3 hours)</strong></div>
+          <div class="status-msg">Reward per cycle: <strong>$200</strong></div>
+          <div id="timer-display" class="timer-display">03:00:00</div>
+          <button id="mine-btn" class="action-btn" type="button" onclick="handleMiningButton()">Start Mining (3h)</button>
+          <div id="mining-status" class="status-msg">Press the button to start a 3-hour mining cycle.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. REFERRAL : INVITÉS & LIEN UNIQUE PAR JOUEUR -->
+    <section id="panel-referral" class="tab-panel">
+      <div class="card">
+        <div class="section-title">Referral & Player Invite Link</div>
+        <div class="stat-box" style="margin-bottom: 12px;">
+          <div>Invited Players</div>
+          <strong><span id="referral-count">0</span></strong>
+        </div>
+
+        <div class="box">
+          <div><strong>Player Invite Link:</strong></div>
+          <div id="referral-link" class="contract-text">https://t.me/HOGSCOM_BOT?start=ref_player</div>
+          <button id="copy-ref-btn" class="action-btn" type="button" onclick="copyReferralLink()">Copy Player Link</button>
+          <div id="ref-copy-status" class="status-msg"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. WALLET : PORTEFEUILLE CONNECTÉ & JETONS DÉJÀ MINÉS -->
+    <section id="panel-crops" class="tab-panel">
+      <div class="card">
+        <div class="section-title">Wallet & Mined Tokens</div>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div>Mined Tokens</div>
+            <strong><span id="mined-tokens-count">0</span> $HG</strong>
+          </div>
+          <div class="stat-box">
+            <div>Mining Balance</div>
+            <strong>$<span id="mining-balance">0</span></strong>
+          </div>
+        </div>
+
+        <div class="box">
+          <div><strong>Connected Wallet:</strong></div>
+          <div id="wallet-pill" class="wallet-pill">Disconnected</div>
+          <div id="wallet-addr-display" class="contract-text" style="display: none;"></div>
+          <div class="input-group">
+            <input
+              id="wallet-address-input"
+              class="text-input"
+              type="text"
+              placeholder="Enter TON wallet address (UQ... or EQ...)"
+            />
+            <button id="connect-wallet-btn" class="action-btn" style="margin-top: 0; margin-right: 0;" type="button" onclick="toggleWalletConnection()">Connect Wallet</button>
+          </div>
+          <div id="wallet-status" class="status-msg">Connect your wallet to see your linked address and mined tokens.</div>
+        </div>
+
+        <div class="box">
+          <div><strong>$HG Contract (TON):</strong></div>
+          <div id="contract-addr" class="contract-text">EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un</div>
+          <button id="copy-btn" class="action-btn" type="button" onclick="copyContract()">Copy Contract</button>
+          <button class="action-btn btn-secondary" type="button" onclick="openExternalLink(null, 'https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">View on Tonviewer</button>
+          <div id="copy-status" class="status-msg"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- BARRE DU BAS : 4 LOGOS DANS DES FONDS EN CERCLE, DORÉS AU CLIC -->
+  <nav class="bottom-nav" aria-label="Main Navigation">
+    <div class="bottom-nav-inner">
+      <button id="nav-tasks" class="nav-btn" type="button" data-tab="tasks">
+        <span class="nav-icon-circle">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm1 5v2h8V8H8zm0 4v2h8v-2H8zm0 4v2h5v-2H8z"/>
+          </svg>
+        </span>
+        <span>Tasks</span>
+      </button>
+
+      <button id="nav-mining" class="nav-btn active" type="button" data-tab="mining">
+        <span class="nav-icon-circle">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-1.1c-1.1-.2-2-.9-2.2-2h2c.2.4.6.6 1.2.6.7 0 1.2-.3 1.2-.8 0-.6-.5-.9-1.4-1.1-1.3-.3-2.4-.8-2.4-2.3 0-1.2.8-2 2-2.2V6h2v1.1c1 .2 1.8.8 2 1.8h-2c-.2-.3-.5-.5-1-.5-.6 0-1.1.3-1.1.8 0 .5.4.8 1.5 1 1.4.3 2.3.9 2.3 2.4 0 1.3-.8 2.1-2.2 2.3V17z"/>
+          </svg>
+        </span>
+        <span>Mining</span>
+      </button>
+
+      <button id="nav-referral" class="nav-btn" type="button" data-tab="referral">
+        <span class="nav-icon-circle">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+          </svg>
+        </span>
+        <span>Referral</span>
+      </button>
+
+      <button id="nav-crops" class="nav-btn" type="button" data-tab="crops">
+        <span class="nav-icon-circle">
+          <svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1h-4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h4V8a2 2 0 0 0-2-2zm-2 5a1 1 0 1 0 0 2h3v-2h-3zM6 4h11v1H6V4z"/>
+          </svg>
+        </span>
+        <span>Wallet</span>
+      </button>
+    </div>
+  </nav>
+
+  <script>
+    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+    const MINING_REWARD = 200;
+    const MINED_TOKENS_PER_CYCLE = 25;
+    const TASK_REWARD_USD = 10;
+    const TASK_PROCESS_MS = 15 * 1000;
+    const VERIFY_ENDPOINT = "https://hogs-verify.kevinngabena.workers.dev";
+
+    const TASKS = [
+      {
+        id: "task1",
+        title: "Join Session: HOGS COMMUNITY",
+        rewardUsd: TASK_REWARD_USD,
+        chatUsername: "COMMUNAUTE_HOGS",
+        buttonLabel: "Join Telegram",
+        url: "https://t.me/COMMUNAUTE_HOGS",
+        hint: "Join HOGS COMMUNITY first, then click Claim."
+      },
+      {
+        id: "task2",
+        title: "Discover $HG on STON.fi",
+        rewardUsd: TASK_REWARD_USD,
+        chatUsername: null,
+        buttonLabel: "Open STON.fi",
+        url: "https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un",
+        hint: "Click \"Open STON.fi\" first to enable Claim."
+      }
+    ];
+
+    function switchTab(tabName) {
+      const tabs = ["tasks", "mining", "referral", "crops"];
+      tabs.forEach((name) => {
+        const panel = document.getElementById("panel-" + name);
+        const navBtn = document.getElementById("nav-" + name);
+        const isSelected = name === tabName;
+        if (panel) panel.classList.toggle("active", isSelected);
+        if (navBtn) navBtn.classList.toggle("active", isSelected);
+      });
+    }
+
+    document.querySelectorAll(".nav-btn[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const target = this.getAttribute("data-tab");
+        if (target) switchTab(target);
+      });
+    });
+
+    let tg = null;
+    let tgUser = null;
+    try {
+      tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+      if (tg) {
+        if (typeof tg.ready === "function") tg.ready();
+        if (typeof tg.expand === "function") tg.expand();
+        tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+      }
+    } catch (e) {
+      tg = null;
+      tgUser = null;
+    }
+
+    const PLAYER_STORAGE_KEY = "hogs_player_ref_id_v1";
+    function getOrCreatePlayerRefCode() {
+      if (tgUser && tgUser.id) {
+        return `ref_${tgUser.id}`;
+      }
+      try {
+        let savedCode = localStorage.getItem(PLAYER_STORAGE_KEY);
+        if (!savedCode) {
+          savedCode = "ref_" + Math.random().toString(36).substring(2, 8);
+          localStorage.setItem(PLAYER_STORAGE_KEY, savedCode);
+        }
+        return savedCode;
+      } catch (e) {
+        return "ref_guest";
+      }
+    }
+
+    const playerRefCode = getOrCreatePlayerRefCode();
+    const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : playerRefCode;
+    const STORAGE_KEY = `hogs_miniapp_state_v11_${userKey}`;
+
+    const displayUser = tgUser
+      ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
+      : "Guest";
+
+    const badgeEl = document.getElementById("user-badge");
+    if (badgeEl) badgeEl.textContent = `Member: ${displayUser}`;
+
+    const refBase = "https://t.me/HOGSCOM_BOT";
+    const refLink = `${refBase}?start=${playerRefCode}`;
+    const refLinkEl = document.getElementById("referral-link");
+    if (refLinkEl) refLinkEl.textContent = refLink;
+
+    const defaultState = {
+      taskBalance: 0,
+      done: {},
+      pending: {},
+      miningBalance: 0,
+      minedTokens: 0,
+      referralCount: 0,
+      walletAddress: "",
+      miningEndTime: null,
+      miningPendingClaim: false
+    };
+
+    function loadInitialState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { ...defaultState };
+        const parsed = JSON.parse(raw);
+        return {
+          ...defaultState,
+          ...(parsed && typeof parsed === "object" ? parsed : {}),
+          done: parsed && parsed.done && typeof parsed.done === "object" ? parsed.done : {},
+          pending: parsed && parsed.pending && typeof parsed.pending === "object" ? parsed.pending : {}
+        };
+      } catch (e) {
+        return { ...defaultState };
+      }
+    }
+
+    let state = loadInitialState();
+    if (typeof state.miningBalance !== "number") state.miningBalance = 0;
+    if (typeof state.minedTokens !== "number") state.minedTokens = 0;
+    if (typeof state.taskBalance !== "number") state.taskBalance = 0;
+    if (typeof state.referralCount !== "number") state.referralCount = 0;
 
     const taskTimers = {};
 
