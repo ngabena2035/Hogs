@@ -188,6 +188,97 @@
       margin-top: 2px;
     }
 
+    /* Tiered 5M-step Progress Bar (up to 1B) + Subtle Golden Particle Rain */
+    .milestone-stage {
+      position: relative;
+      width: 100%;
+      margin-top: 14px;
+      padding: 16px 14px;
+      border-radius: 14px;
+      background: rgba(11, 15, 23, 0.72);
+      border: 1px solid rgba(245, 183, 0, 0.2);
+      overflow: hidden;
+      min-height: 128px;
+      display: flex;
+      align-items: center;
+    }
+
+    .particle-rain {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .gold-particle {
+      position: absolute;
+      top: -18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fff0a8, #f5b700 65%, #9a6700 100%);
+      box-shadow: 0 0 8px rgba(245, 183, 0, 0.45);
+      opacity: 0;
+      animation: particleFall linear infinite;
+    }
+
+    .milestone-inner {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      text-align: left;
+    }
+
+    .milestone-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+    }
+
+    .milestone-range {
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .milestone-pct {
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .milestone-track {
+      position: relative;
+      width: 100%;
+      height: 13px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(245, 183, 0, 0.28);
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45);
+    }
+
+    .milestone-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #c98a00, #f5b700, #ffe37d);
+      box-shadow: 0 0 14px rgba(245, 183, 0, 0.55);
+      transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .milestone-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
     .task-item {
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border);
@@ -465,6 +556,23 @@
       }
     }
 
+    @keyframes particleFall {
+      0% {
+        transform: translateY(-10px) translateX(0px) rotate(0deg);
+        opacity: 0;
+      }
+      18% {
+        opacity: var(--p-opacity, 0.35);
+      }
+      82% {
+        opacity: var(--p-opacity, 0.35);
+      }
+      100% {
+        transform: translateY(155px) translateX(8px) rotate(180deg);
+        opacity: 0;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation: none !important;
@@ -509,7 +617,7 @@
       </div>
     </section>
 
-    <!-- SCREEN 2: Mining (Animated $HOGS Logo in Top Circle + Gold Button) -->
+    <!-- SCREEN 2: Mining (Animated $HOGS Logo in Top Circle + Gold Button + Tiered Progress & Particle Rain) -->
     <section id="screen-mining" class="screen active">
       <div class="card">
         <div class="mining-center">
@@ -541,6 +649,23 @@
           </button>
 
           <div class="status" id="mining-status-msg"></div>
+
+          <div class="milestone-stage" id="milestone-stage">
+            <div class="particle-rain" id="particle-rain" aria-hidden="true"></div>
+            <div class="milestone-inner">
+              <div class="milestone-top">
+                <span class="milestone-range" id="milestone-range">0 → 5M $HG</span>
+                <span class="milestone-pct" id="milestone-pct">0.00%</span>
+              </div>
+              <div class="milestone-track">
+                <div class="milestone-fill" id="milestone-fill"></div>
+              </div>
+              <div class="milestone-bottom">
+                <span id="milestone-detail">0 / 5,000,000 $HG</span>
+                <span id="milestone-cap">Cap: 1B $HG</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -614,6 +739,9 @@
     const TASK_REWARD_POINTS = 50;
     const EXTRA_TASKS = [];
 
+    const TIER_STEP = 5_000_000;
+    const TIER_MAX_CAP = 1_000_000_000;
+
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
@@ -660,6 +788,78 @@
       triggerHaptic("success");
     }
 
+    function initParticleRain(count = 14) {
+      const rainEl = document.getElementById("particle-rain");
+      if (!rainEl || rainEl.childElementCount > 0) return;
+
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement("span");
+        p.className = "gold-particle";
+        const size = 5 + (i % 4) * 2;
+        const left = ((i * 7.1) + 4) % 94;
+        const duration = 4.2 + (i % 5) * 0.85;
+        const delay = -(i * 0.55);
+        const opacity = (0.16 + (i % 3) * 0.07).toFixed(2);
+
+        p.style.width = `${size}px`;
+        p.style.height = `${size}px`;
+        p.style.left = `${left}%`;
+        p.style.animationDuration = `${duration}s`;
+        p.style.animationDelay = `${delay}s`;
+        p.style.setProperty("--p-opacity", opacity);
+
+        rainEl.appendChild(p);
+      }
+    }
+
+    function formatCompactAmount(num) {
+      if (num >= 1_000_000_000) {
+        const b = num / 1_000_000_000;
+        return `${Number.isInteger(b) ? b : b.toFixed(2)}B`;
+      }
+      if (num >= 1_000_000) {
+        const m = num / 1_000_000;
+        return `${Number.isInteger(m) ? m : m.toFixed(1)}M`;
+      }
+      return num.toLocaleString("en-US");
+    }
+
+    function updateMilestoneProgress(rawTotal) {
+      initParticleRain();
+
+      const rangeEl = document.getElementById("milestone-range");
+      const pctEl = document.getElementById("milestone-pct");
+      const fillEl = document.getElementById("milestone-fill");
+      const detailEl = document.getElementById("milestone-detail");
+      const capEl = document.getElementById("milestone-cap");
+
+      if (!rangeEl || !pctEl || !fillEl || !detailEl || !capEl) return;
+
+      const total = Math.max(0, Number(rawTotal) || 0);
+
+      if (total >= TIER_MAX_CAP) {
+        const finalStart = TIER_MAX_CAP - TIER_STEP;
+        rangeEl.textContent = `${formatCompactAmount(finalStart)} → 1B $HG`;
+        pctEl.textContent = "100.00%";
+        fillEl.style.width = "100%";
+        detailEl.textContent = `${TIER_MAX_CAP.toLocaleString("en-US")} / 1,000,000,000 $HG`;
+        capEl.textContent = "Max 1B reached";
+        return;
+      }
+
+      const tierIndex = Math.floor(total / TIER_STEP);
+      const min = tierIndex * TIER_STEP;
+      const max = Math.min(min + TIER_STEP, TIER_MAX_CAP);
+      const pct = ((total - min) / (max - min)) * 100;
+      const visualWidth = total > 0 ? Math.max(pct, 2.5) : 0;
+
+      rangeEl.textContent = `${formatCompactAmount(min)} → ${formatCompactAmount(max)} $HG`;
+      pctEl.textContent = pct > 0 && pct < 0.01 ? "<0.01%" : `${pct.toFixed(2)}%`;
+      fillEl.style.width = `${Math.min(100, visualWidth)}%`;
+      detailEl.textContent = `${total.toLocaleString("en-US")} / ${max.toLocaleString("en-US")} $HG`;
+      capEl.textContent = `Tier #${tierIndex + 1} • Cap 1B`;
+    }
+
     function getHogsPlayerIdentity() {
       const tgUser =
         window.Telegram &&
@@ -674,13 +874,23 @@
         localStorage.setItem("hogs_guest_id", fallbackId);
       }
 
+      const startParam =
+        window.Telegram &&
+        window.Telegram.WebApp &&
+        window.Telegram.WebApp.initDataUnsafe
+          ? window.Telegram.WebApp.initDataUnsafe.start_param || ""
+          : "";
+
+      const urlRef = new URLSearchParams(window.location.search).get("ref") || "";
       const userId = tgUser && tgUser.id ? tgUser.id : fallbackId;
+
       return {
         userId,
         username: tgUser && tgUser.username ? tgUser.username : "",
         firstName: tgUser && tgUser.first_name ? tgUser.first_name : "Player",
         isTelegramVerified: Boolean(tgUser && tgUser.id),
-        refCode: "ref_" + userId
+        refCode: "ref_" + userId,
+        incomingRef: startParam || urlRef || ""
       };
     }
 
@@ -695,6 +905,222 @@
       referredBy: localStorage.getItem("hogs_referred_by") || "",
       referralCount: Number(localStorage.getItem("hogs_referral_count") || "0")
     };
+
+    function saveLocalState() {
+      localStorage.setItem("hogs_mined_tokens", String(state.minedTokens));
+      localStorage.setItem("hogs_points", String(state.points));
+      localStorage.setItem("hogs_last_mine_at", String(state.lastMineAt));
+      localStorage.setItem("hogs_completed_tasks", JSON.stringify(state.completedTasks));
+      localStorage.setItem("hogs_wallet_address", state.walletAddress || "");
+      localStorage.setItem("hogs_referred_by", state.referredBy || "");
+      localStorage.setItem("hogs_referral_count", String(state.referralCount));
+    }
+
+    function switchCircle(tabName) {
+      triggerHaptic("light");
+      document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
+      document.querySelectorAll(".circle-tab").forEach((el) => el.classList.remove("active"));
+
+      const targetScreen = document.getElementById(`screen-${tabName}`);
+      const targetTab = document.getElementById(`tab-${tabName}`);
+      if (targetScreen) targetScreen.classList.add("active");
+      if (targetTab) targetTab.classList.add("active");
+    }
+
+    function formatRemaining(ms) {
+      const totalSec = Math.max(0, Math.ceil(ms / 1000));
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      return `${h}h ${m}m ${s}s`;
+    }
+
+    function renderUI() {
+      const greetingEl = document.getElementById("player-greeting");
+      if (greetingEl) {
+        const handle = identity.username ? ` (@${identity.username})` : "";
+        greetingEl.textContent = `Connected: ${identity.firstName}${handle}`;
+      }
+
+      const pointsEl = document.getElementById("points-value");
+      const tasksEl = document.getElementById("tasks-count");
+      const minedEl = document.getElementById("mined-hg-total");
+      const refCountEl = document.getElementById("ref-count");
+      const refLinkEl = document.getElementById("my-ref-link");
+      const walletDispEl = document.getElementById("connected-wallet-display");
+      const tgStatusEl = document.getElementById("tg-account-status");
+      const mineBtn = document.getElementById("mine-btn");
+      const timerEl = document.getElementById("mine-timer");
+
+      if (pointsEl) pointsEl.textContent = String(state.points);
+      if (tasksEl) tasksEl.textContent = String(state.completedTasks.length);
+      if (minedEl) minedEl.textContent = `${state.minedTokens.toLocaleString("en-US")} $HG`;
+      if (refCountEl) refCountEl.textContent = String(state.referralCount);
+      if (refLinkEl) refLinkEl.textContent = `${MINI_APP_URL}?ref=${identity.refCode}`;
+
+      if (tgStatusEl) {
+        tgStatusEl.textContent = identity.isTelegramVerified
+          ? `Telegram ID: ${identity.userId}`
+          : `Guest session: ${identity.userId}`;
+      }
+
+      if (walletDispEl) {
+        walletDispEl.textContent = state.walletAddress
+          ? `Connected TON Wallet: ${state.walletAddress}`
+          : "No TON wallet connected yet.";
+      }
+
+      const elapsed = Date.now() - state.lastMineAt;
+      const canMine = !state.lastMineAt || elapsed >= MINING_COOLDOWN_MS;
+      if (mineBtn) {
+        mineBtn.disabled = !canMine;
+      }
+      if (timerEl) {
+        timerEl.textContent = canMine
+          ? `Ready to mine +${MINING_REWARD_HG} $HG!`
+          : `Next cycle (+${MINING_REWARD_HG} $HG) in ${formatRemaining(MINING_COOLDOWN_MS - elapsed)}`;
+      }
+
+      updateMilestoneProgress(state.minedTokens);
+    }
+
+    async function claimMining() {
+      const statusEl = document.getElementById("mining-status-msg");
+      const elapsed = Date.now() - state.lastMineAt;
+      if (state.lastMineAt && elapsed < MINING_COOLDOWN_MS) {
+        if (statusEl) {
+          statusEl.textContent = `Wait ${formatRemaining(MINING_COOLDOWN_MS - elapsed)} before next claim.`;
+        }
+        return;
+      }
+
+      state.minedTokens += MINING_REWARD_HG;
+      state.lastMineAt = Date.now();
+      saveLocalState();
+      renderUI();
+      playRewardAnimation(`+${MINING_REWARD_HG} $HG`, "mined-total-box");
+
+      if (statusEl) {
+        statusEl.textContent = `Claimed +${MINING_REWARD_HG} $HG!`;
+      }
+
+      await syncHogsProgress({ minedTokens: state.minedTokens });
+    }
+
+    function openCommunity() {
+      triggerHaptic("light");
+      const url = `https://t.me/${COMMUNITY_USERNAME}`;
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(url);
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    }
+
+    async function verifyCommunityTask() {
+      const taskId = "tg_community";
+      const statusEl = document.getElementById("tasks-status-msg");
+      if (state.completedTasks.includes(taskId)) {
+        if (statusEl) statusEl.textContent = "Community task already completed.";
+        return;
+      }
+
+      try {
+        const res = await fetch(HOGS_WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatUsername: COMMUNITY_USERNAME,
+            userId: identity.userId
+          })
+        });
+        const data = await res.json();
+        if (!data || !data.isMember) {
+          if (statusEl) statusEl.textContent = "Join the Telegram group/channel first, then verify.";
+          return;
+        }
+      } catch (err) {}
+
+      state.completedTasks.push(taskId);
+      state.points += TASK_REWARD_POINTS;
+      saveLocalState();
+      renderUI();
+      playRewardAnimation(`+${TASK_REWARD_POINTS} PTS`, "points-box");
+      if (statusEl) statusEl.textContent = `Task verified! +${TASK_REWARD_POINTS} Points.`;
+      await syncHogsProgress({ points: state.points, completedTasks: state.completedTasks });
+    }
+
+    function copyRefLink() {
+      triggerHaptic("light");
+      const link = `${MINI_APP_URL}?ref=${identity.refCode}`;
+      const statusEl = document.getElementById("referral-status-msg");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).catch(() => {});
+      }
+      if (statusEl) statusEl.textContent = "Referral link copied!";
+    }
+
+    async function syncHogsProgress(extra = {}) {
+      try {
+        const res = await fetch(HOGS_WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "progress_sync",
+            userId: identity.userId,
+            username: identity.username,
+            firstName: identity.firstName,
+            refCode: identity.refCode,
+            referredBy: state.referredBy,
+            walletAddress: state.walletAddress,
+            minedTokens: state.minedTokens,
+            points: state.points,
+            completedTasks: state.completedTasks,
+            ...extra
+          })
+        });
+        const data = await res.json();
+        if (data && data.ok) {
+          if (typeof data.referralCount === "number") {
+            state.referralCount = data.referralCount;
+          }
+          if (data.lockedReferrer) {
+            state.referredBy = data.lockedReferrer;
+          }
+          if (data.profile && typeof data.profile.minedTokens === "number") {
+            state.minedTokens = Math.max(state.minedTokens, data.profile.minedTokens);
+          }
+          saveLocalState();
+          renderUI();
+        }
+      } catch (err) {}
+    }
+
+    async function syncReferralOnStart() {
+      if (identity.incomingRef && !state.referredBy) {
+        state.referredBy = identity.incomingRef;
+        saveLocalState();
+      }
+      try {
+        const res = await fetch(HOGS_WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "referral_sync",
+            userId: identity.userId,
+            refCode: identity.refCode,
+            referredBy: state.referredBy || identity.incomingRef
+          })
+        });
+        const data = await res.json();
+        if (data && data.ok) {
+          if (typeof data.referralCount === "number") state.referralCount = data.referralCount;
+          if (data.lockedReferrer) state.referredBy = data.lockedReferrer;
+          saveLocalState();
+          renderUI();
+        }
+      } catch (err) {}
+    }
 
     let tonConnectUI = null;
     if (window.TON_CONNECT_UI && window.TON_CONNECT_UI.TonConnectUI) {
@@ -725,301 +1151,13 @@
       try {
         if (tonConnectUI && typeof tonConnectUI.openModal === "function") {
           await tonConnectUI.openModal();
-        } else if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-          window.Telegram.WebApp.openTelegramLink("https://t.me/wallet");
-        } else {
-          window.open("https://t.me/wallet", "_blank");
         }
-      } catch (err) {
-        console.error("TON connection error:", err);
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-          window.Telegram.WebApp.openTelegramLink("https://t.me/wallet");
-        }
-      }
+      } catch (err) {}
     }
 
-    function switchCircle(tabName) {
-      triggerHaptic("light");
-      const map = {
-        tasks: "screen-tasks",
-        mining: "screen-mining",
-        referral: "screen-referral",
-        wallet: "screen-wallet"
-      };
-
-      Object.keys(map).forEach((key) => {
-        const screenEl = document.getElementById(map[key]);
-        const tabEl = document.getElementById("tab-" + key);
-        const isActive = key === tabName;
-        screenEl.classList.remove("active");
-        if (isActive) {
-          void screenEl.offsetWidth;
-          screenEl.classList.add("active");
-        }
-        tabEl.classList.toggle("active", isActive);
-      });
-    }
-
-    function setStatus(msg, section = "mining") {
-      const targetMap = {
-        tasks: "tasks-status-msg",
-        mining: "mining-status-msg",
-        referral: "referral-status-msg"
-      };
-      const el = document.getElementById(targetMap[section] || "mining-status-msg");
-      if (el) el.textContent = msg;
-    }
-
-    function saveLocalState() {
-      localStorage.setItem("hogs_mined_tokens", String(state.minedTokens));
-      localStorage.setItem("hogs_points", String(state.points));
-      localStorage.setItem("hogs_last_mine_at", String(state.lastMineAt));
-      localStorage.setItem("hogs_completed_tasks", JSON.stringify(state.completedTasks));
-      localStorage.setItem("hogs_wallet_address", state.walletAddress);
-      localStorage.setItem("hogs_referred_by", state.referredBy);
-      localStorage.setItem("hogs_referral_count", String(state.referralCount));
-    }
-
-    function renderExtraTasks() {
-      const container = document.getElementById("custom-tasks-list");
-      container.innerHTML = "";
-
-      EXTRA_TASKS.forEach((task) => {
-        const done = state.completedTasks.includes(task.id);
-        const box = document.createElement("div");
-        box.className = "task-item";
-        box.innerHTML = `
-          <div style="font-weight: 700;">${task.title}</div>
-          <div class="sub">${task.desc} (+${task.points} Points)</div>
-          <button ${done ? "disabled" : ""} onclick="completeExtraTask('${task.id}', ${task.points}, '${task.url || ""}')">
-            ${done ? "Task Completed" : "Complete Task (+" + task.points + " Points)"}
-          </button>
-        `;
-        container.appendChild(box);
-      });
-    }
-
-    async function completeExtraTask(taskId, pts, url) {
-      if (state.completedTasks.includes(taskId)) return;
-      if (url) {
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-          window.Telegram.WebApp.openLink(url);
-        } else {
-          window.open(url, "_blank");
-        }
-      }
-      state.completedTasks.push(taskId);
-      state.points += Number(pts || 0);
-      saveLocalState();
-      renderUI();
-      playRewardAnimation(`+${pts} Points`, "points-box");
-      await syncHogsProgress({
-        minedTokens: state.minedTokens,
-        points: state.points,
-        completedTasks: state.completedTasks
-      });
-      setStatus(`Task completed! +${pts} Points added.`, "tasks");
-    }
-
-    function renderUI() {
-      document.getElementById("player-greeting").textContent =
-        `Connected: ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""}`;
-      document.getElementById("mined-hg-total").textContent = `${state.minedTokens} $HG`;
-      document.getElementById("points-value").textContent = state.points;
-      document.getElementById("tasks-count").textContent = state.completedTasks.length;
-      document.getElementById("ref-count").textContent = state.referralCount;
-
-      const tgStatusEl = document.getElementById("tg-account-status");
-      if (identity.isTelegramVerified) {
-        tgStatusEl.textContent =
-          `Telegram Account: ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""} — ID ${identity.userId}`;
-      } else {
-        tgStatusEl.textContent =
-          "Open the Mini App from Telegram to link your Telegram account.";
-      }
-
-      const walletDisplay = document.getElementById("connected-wallet-display");
-      if (state.walletAddress) {
-        walletDisplay.textContent = `Linked TON Wallet: ${state.walletAddress}`;
-      } else {
-        walletDisplay.textContent = "No TON wallet connected yet.";
-      }
-
-      document.getElementById("my-ref-link").textContent =
-        `${MINI_APP_URL}?startapp=${encodeURIComponent(identity.refCode)}`;
-
-      const lockInfo = document.getElementById("ref-lock-info");
-      if (state.referredBy) {
-        lockInfo.textContent = `Invite locked by: ${state.referredBy} (one referrer per account).`;
-      } else {
-        lockInfo.textContent = "An account can only be invited once.";
-      }
-
-      const taskBtn = document.getElementById("verify-task-btn");
-      if (state.completedTasks.includes("join_community")) {
-        taskBtn.textContent = "Community Task Verified";
-        taskBtn.disabled = true;
-      }
-
-      renderExtraTasks();
-      updateMiningTimer();
-    }
-
-    function updateMiningTimer() {
-      const remaining = state.lastMineAt + MINING_COOLDOWN_MS - Date.now();
-      const mineBtn = document.getElementById("mine-btn");
-      const timerEl = document.getElementById("mine-timer");
-
-      if (remaining <= 0) {
-        mineBtn.disabled = false;
-        timerEl.textContent = "3h cycle complete: claim your 200 $HG!";
-      } else {
-        mineBtn.disabled = true;
-        const totalSec = Math.ceil(remaining / 1000);
-        const h = Math.floor(totalSec / 3600);
-        const m = Math.floor((totalSec % 3600) / 60);
-        const s = totalSec % 60;
-        timerEl.textContent = `Next cycle (200 $HG) in ${h}h ${m}m ${s}s`;
-      }
-    }
-
-    async function syncHogsProgress({ minedTokens, points, completedTasks, walletAddress, referredBy }) {
-      const currentIdentity = getHogsPlayerIdentity();
-
-      const payload = {
-        action: "progress_sync",
-        userId: currentIdentity.userId,
-        username: currentIdentity.username,
-        firstName: currentIdentity.firstName,
-        refCode: currentIdentity.refCode,
-        referredBy: referredBy || localStorage.getItem("hogs_referred_by") || "",
-        walletAddress: walletAddress !== undefined ? walletAddress : (localStorage.getItem("hogs_wallet_address") || ""),
-        minedTokens: Number(minedTokens !== undefined ? minedTokens : state.minedTokens),
-        points: Number(points !== undefined ? points : state.points),
-        completedTasks: Array.isArray(completedTasks) ? completedTasks : state.completedTasks
-      };
-
-      try {
-        const response = await fetch(HOGS_WORKER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        return await response.json();
-      } catch (err) {
-        console.error("progress_sync error:", err);
-        return { ok: false };
-      }
-    }
-
-    async function claimMining() {
-      if (state.lastMineAt + MINING_COOLDOWN_MS > Date.now()) return;
-      state.minedTokens += MINING_REWARD_HG;
-      state.lastMineAt = Date.now();
-      saveLocalState();
-      renderUI();
-      playRewardAnimation(`+${MINING_REWARD_HG} $HG`, "mined-total-box");
-      setStatus(`+${MINING_REWARD_HG} $HG mined! Syncing...`, "mining");
-
-      const res = await syncHogsProgress({ minedTokens: state.minedTokens });
-      if (res && res.ok) {
-        setStatus(`+${MINING_REWARD_HG} $HG saved to your player profile.`, "mining");
-      }
-    }
-
-    function openCommunity() {
-      triggerHaptic("light");
-      const url = `https://t.me/${COMMUNITY_USERNAME}`;
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-        window.Telegram.WebApp.openTelegramLink(url);
-      } else {
-        window.open(url, "_blank");
-      }
-    }
-
-    async function verifyCommunityTask() {
-      if (state.completedTasks.includes("join_community")) return;
-      triggerHaptic("light");
-      setStatus("Verifying group membership...", "tasks");
-
-      try {
-        const response = await fetch(HOGS_WORKER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chatUsername: COMMUNITY_USERNAME,
-            userId: identity.userId
-          })
-        });
-        const data = await response.json();
-
-        if (data && data.isMember) {
-          state.completedTasks.push("join_community");
-          state.points += TASK_REWARD_POINTS;
-          saveLocalState();
-          renderUI();
-          playRewardAnimation(`+${TASK_REWARD_POINTS} Points`, "points-box");
-          await syncHogsProgress({
-            minedTokens: state.minedTokens,
-            points: state.points,
-            completedTasks: state.completedTasks
-          });
-          setStatus(`Membership confirmed! +${TASK_REWARD_POINTS} Points added.`, "tasks");
-        } else {
-          setStatus(`Membership not detected (${data.status || "check the group"}).`, "tasks");
-        }
-      } catch (err) {
-        setStatus("Error while verifying the task.", "tasks");
-      }
-    }
-
-    async function syncReferralOnStart() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const startParam =
-        (window.Telegram &&
-          window.Telegram.WebApp &&
-          window.Telegram.WebApp.initDataUnsafe &&
-          window.Telegram.WebApp.initDataUnsafe.start_param) ||
-        urlParams.get("startapp") ||
-        "";
-
-      try {
-        const response = await fetch(HOGS_WORKER_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "referral_sync",
-            userId: identity.userId,
-            refCode: identity.refCode,
-            referredBy: startParam || state.referredBy
-          })
-        });
-        const data = await response.json();
-        if (data && data.ok) {
-          state.referralCount = Number(data.referralCount || 0);
-          if (data.lockedReferrer) {
-            state.referredBy = data.lockedReferrer;
-          }
-          saveLocalState();
-          renderUI();
-          await syncHogsProgress({ referredBy: state.referredBy });
-        }
-      } catch (err) {
-        console.error("referral_sync error:", err);
-      }
-    }
-
-    function copyRefLink() {
-      triggerHaptic("light");
-      const text = document.getElementById("my-ref-link").textContent;
-      navigator.clipboard?.writeText(text);
-      setStatus("Referral link copied!", "referral");
-    }
-
-    setInterval(updateMiningTimer, 1000);
     renderUI();
-    syncReferralOnStart();
-    syncHogsProgress({});
+    syncReferralOnStart().then(() => syncHogsProgress());
+    setInterval(renderUI, 1000);
   </script>
 </body>
 </html>
