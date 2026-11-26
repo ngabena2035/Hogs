@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HOGS ($HG) — Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -522,10 +523,10 @@
       </div>
     </section>
 
-    <!-- 4. WALLET (GRAM / CRYPTO & MEMES RECEIVE & SEND) -->
+    <!-- 4. WALLET (TON BLOCKCHAIN CONNECT + RECEIVE & SEND) -->
     <section id="panel-crops" class="tab-panel">
       <div class="card">
-        <div class="section-title">Gram Wallet — Cryptos & Memes</div>
+        <div class="section-title">TON Blockchain Wallet — Cryptos & Memes</div>
         <div class="stats-row">
           <div class="stat-box">
             <div>Mined Tokens</div>
@@ -538,19 +539,14 @@
         </div>
 
         <div class="box">
-          <div><strong>Gram Wallet Connection:</strong></div>
+          <div><strong>TON Blockchain Connection:</strong></div>
           <div id="wallet-pill" class="wallet-pill">Disconnected</div>
           <div id="wallet-addr-display" class="contract-text" style="display: none;"></div>
           <div class="input-group">
-            <input
-              id="wallet-address-input"
-              class="text-input"
-              type="text"
-              placeholder="Paste Gram / TON wallet address (UQ... or EQ...)"
-            />
-            <button id="connect-wallet-btn" class="action-btn" style="margin-top: 0; margin-right: 0;" type="button" onclick="toggleWalletConnection()">Connect Wallet</button>
+            <button id="connect-wallet-btn" class="action-btn" style="margin-top: 0; flex: 1;" type="button" onclick="toggleWalletConnection()">Connect TON Wallet</button>
+            <button id="open-tonviewer-wallet-btn" class="action-btn btn-secondary" style="margin-top: 0; margin-right: 0;" type="button" onclick="openConnectedTonExplorer()">TON Explorer</button>
           </div>
-          <div id="wallet-status" class="status-msg">Connect your Gram wallet to receive & send cryptos and memes.</div>
+          <div id="wallet-status" class="status-msg">Connect your Telegram or TON wallet to link directly to the TON blockchain.</div>
         </div>
 
         <div class="box">
@@ -561,8 +557,8 @@
           </div>
 
           <div id="wallet-receive-box" style="margin-top: 10px;">
-            <div class="status-msg">Share your Gram wallet address to receive cryptos & memes ($HG, GRAM, TON, MEME):</div>
-            <div id="receive-addr-text" class="contract-text">Connect a Gram wallet first</div>
+            <div class="status-msg">Share your connected TON address to receive cryptos & memes ($HG, TON, GRAM, MEME):</div>
+            <div id="receive-addr-text" class="contract-text">Connect a TON wallet first</div>
             <button id="copy-receive-btn" class="action-btn" type="button" onclick="copyReceiveAddress()">Copy Receive Address</button>
             <div id="receive-status" class="status-msg"></div>
           </div>
@@ -570,9 +566,9 @@
           <div id="wallet-send-box" style="display: none; margin-top: 10px;">
             <div class="input-group">
               <select id="send-asset-select" class="select-input">
+                <option value="TON">TON (On-chain via TON Connect)</option>
                 <option value="$HG">$HG (Meme Token)</option>
                 <option value="GRAM">GRAM</option>
-                <option value="TON">TON</option>
                 <option value="MEME">MEME</option>
               </select>
               <input
@@ -589,11 +585,11 @@
                 id="send-recipient-input"
                 class="text-input"
                 type="text"
-                placeholder="Recipient address (UQ... or EQ...)"
+                placeholder="Recipient TON address (UQ... or EQ...)"
               />
               <button id="send-crypto-btn" class="action-btn" style="margin-top: 0; margin-right: 0;" type="button" onclick="handleSendCrypto()">Send</button>
             </div>
-            <div id="send-status" class="status-msg">Select a crypto or meme, enter recipient address and amount.</div>
+            <div id="send-status" class="status-msg">TON transfers open your connected TON wallet for signing.</div>
           </div>
 
           <div style="margin-top: 12px;">
@@ -663,6 +659,7 @@
     const TASK_REWARD_USD = 10;
     const TASK_PROCESS_MS = 15 * 1000;
     const VERIFY_ENDPOINT = "https://hogs-verify.kevinngabena.workers.dev";
+    const TON_MANIFEST_URL = "https://ngabena2035.github.io/Hogs/tonconnect-manifest.json";
 
     const TASKS = [
       {
@@ -749,7 +746,7 @@
 
     const playerRefCode = getOrCreatePlayerRefCode();
     const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : playerRefCode;
-    const STORAGE_KEY = `hogs_miniapp_state_v14_${userKey}`;
+    const STORAGE_KEY = `hogs_miniapp_state_v15_${userKey}`;
     const INVITED_LOCK_KEY = `hogs_invited_once_lock_${userKey}`;
 
     const displayUser = tgUser
@@ -819,6 +816,49 @@
           localStorage.setItem(INVITED_LOCK_KEY, state.referredBy);
         }
       } catch (e) {}
+    }
+
+    let tonConnectUI = null;
+    function initTonConnect() {
+      const walletStatus = document.getElementById("wallet-status");
+      try {
+        if (!window.TON_CONNECT_UI || !window.TON_CONNECT_UI.TonConnectUI) {
+          if (walletStatus) {
+            walletStatus.textContent = "TON Connect SDK not loaded yet. Check your internet connection.";
+          }
+          return;
+        }
+
+        tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
+          manifestUrl: TON_MANIFEST_URL,
+          actionsConfiguration: {
+            twaReturnUrl: refBase
+          }
+        });
+
+        tonConnectUI.onStatusChange((wallet) => {
+          if (wallet && wallet.account && wallet.account.address) {
+            state.walletAddress = wallet.account.address;
+            saveState();
+            renderWalletUI();
+            if (walletStatus) {
+              const chainName = wallet.account.chain === "-3" ? "TON Testnet" : "TON Mainnet";
+              walletStatus.textContent = `Connected to ${chainName} via TON Connect.`;
+            }
+          } else {
+            state.walletAddress = "";
+            saveState();
+            renderWalletUI();
+            if (walletStatus) {
+              walletStatus.textContent = "Disconnected from TON blockchain.";
+            }
+          }
+        });
+      } catch (e) {
+        if (walletStatus) {
+          walletStatus.textContent = "Unable to initialize TON Connect. Verify tonconnect-manifest.json.";
+        }
+      }
     }
 
     function normalizeRefCode(rawCode) {
@@ -912,7 +952,8 @@
     }
 
     function isValidWalletAddress(addr) {
-      return /^(UQ|EQ|kQ|0Q)[A-Za-z0-9_-]{46}$/.test(addr.trim());
+      const clean = addr.trim();
+      return /^(UQ|EQ|kQ|0Q)[A-Za-z0-9_-]{46}$/.test(clean) || /^-?\d+:[0-9a-fA-F]{64}$/.test(clean);
     }
 
     function formatDuration(ms) {
@@ -1138,61 +1179,64 @@
       const pill = document.getElementById("wallet-pill");
       const addrDisplay = document.getElementById("wallet-addr-display");
       const connectBtn = document.getElementById("connect-wallet-btn");
-      const walletInput = document.getElementById("wallet-address-input");
       const walletStatus = document.getElementById("wallet-status");
       const receiveAddrText = document.getElementById("receive-addr-text");
-      if (!pill || !addrDisplay || !connectBtn || !walletInput || !walletStatus) return;
+      if (!pill || !addrDisplay || !connectBtn || !walletStatus) return;
 
       if (state.walletAddress) {
-        pill.textContent = "Connected";
+        pill.textContent = "Connected (TON)";
         pill.classList.add("connected");
         addrDisplay.style.display = "block";
         addrDisplay.textContent = state.walletAddress;
-        connectBtn.textContent = "Disconnect";
-        walletInput.value = state.walletAddress;
-        walletStatus.textContent = `Connected Gram wallet with ${state.minedTokens} $HG mined.`;
+        connectBtn.textContent = "Disconnect TON";
+        walletStatus.textContent = `Connected TON wallet with ${state.minedTokens} $HG mined.`;
         if (receiveAddrText) receiveAddrText.textContent = state.walletAddress;
       } else {
         pill.textContent = "Disconnected";
         pill.classList.remove("connected");
         addrDisplay.style.display = "none";
         addrDisplay.textContent = "";
-        connectBtn.textContent = "Connect Wallet";
-        walletStatus.textContent = `No Gram wallet connected (${state.minedTokens} $HG mined).`;
-        if (receiveAddrText) receiveAddrText.textContent = "Connect a Gram wallet first";
+        connectBtn.textContent = "Connect TON Wallet";
+        walletStatus.textContent = `No TON wallet connected (${state.minedTokens} $HG mined).`;
+        if (receiveAddrText) receiveAddrText.textContent = "Connect a TON wallet first";
       }
 
       renderTxHistory();
     }
 
-    function toggleWalletConnection() {
-      const input = document.getElementById("wallet-address-input");
+    async function toggleWalletConnection() {
       const walletStatus = document.getElementById("wallet-status");
+      if (!tonConnectUI) initTonConnect();
 
-      if (state.walletAddress) {
-        state.walletAddress = "";
-        saveState();
-        renderWalletUI();
-        return;
-      }
-
-      const typedAddr = (input ? input.value : "").trim();
-      if (!isValidWalletAddress(typedAddr)) {
+      if (!tonConnectUI) {
         if (walletStatus) {
-          walletStatus.textContent = "Enter a valid Gram / TON wallet address starting with UQ or EQ (48 chars).";
+          walletStatus.textContent = "TON Connect is unavailable right now. Please retry.";
         }
         return;
       }
 
-      state.walletAddress = typedAddr;
-      saveState();
-      renderWalletUI();
+      try {
+        if (tonConnectUI.connected) {
+          await tonConnectUI.disconnect();
+        } else {
+          await tonConnectUI.openModal();
+        }
+      } catch (e) {
+        if (walletStatus) {
+          walletStatus.textContent = "TON wallet connection was cancelled or interrupted.";
+        }
+      }
+    }
+
+    function openConnectedTonExplorer() {
+      const addr = state.walletAddress || "EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un";
+      openExternalLink(null, `https://tonviewer.com/${encodeURIComponent(addr)}`);
     }
 
     function copyReceiveAddress() {
       const recStatus = document.getElementById("receive-status");
       if (!state.walletAddress) {
-        if (recStatus) recStatus.textContent = "Connect your Gram wallet first to copy your receive address.";
+        if (recStatus) recStatus.textContent = "Connect your TON wallet first to copy your receive address.";
         return;
       }
       copyTextWithFeedback(
@@ -1200,32 +1244,69 @@
         "copy-receive-btn",
         "receive-status",
         "Copy Receive Address",
-        "Gram receive address copied."
+        "TON receive address copied."
       );
     }
 
-    function handleSendCrypto() {
+    async function handleSendCrypto() {
       const sendStatus = document.getElementById("send-status");
       const assetEl = document.getElementById("send-asset-select");
       const amountEl = document.getElementById("send-amount-input");
       const recipientEl = document.getElementById("send-recipient-input");
 
       if (!state.walletAddress) {
-        if (sendStatus) sendStatus.textContent = "Connect your Gram wallet first before sending cryptos or memes.";
+        if (sendStatus) sendStatus.textContent = "Connect your TON wallet first before sending cryptos or memes.";
         return;
       }
 
-      const asset = assetEl ? assetEl.value : "$HG";
+      const asset = assetEl ? assetEl.value : "TON";
       const amount = parseFloat(amountEl ? amountEl.value : "");
       const recipient = (recipientEl ? recipientEl.value : "").trim();
 
       if (!isValidWalletAddress(recipient)) {
-        if (sendStatus) sendStatus.textContent = "Enter a valid recipient address (UQ... or EQ...).";
+        if (sendStatus) sendStatus.textContent = "Enter a valid TON address (UQ..., EQ... or raw format).";
         return;
       }
 
       if (!amount || isNaN(amount) || amount <= 0) {
         if (sendStatus) sendStatus.textContent = "Enter a positive amount to send.";
+        return;
+      }
+
+      const shortAddr = `${recipient.slice(0, 6)}...${recipient.slice(-4)}`;
+
+      if (asset === "TON") {
+        if (!tonConnectUI || !tonConnectUI.connected) {
+          if (sendStatus) sendStatus.textContent = "Connect via TON Connect first to sign a TON transaction.";
+          return;
+        }
+        const nanoTon = Math.round(amount * 1e9).toString();
+        try {
+          if (sendStatus) sendStatus.textContent = "Confirm the TON transaction inside your wallet...";
+          await tonConnectUI.sendTransaction({
+            validUntil: Math.floor(Date.now() / 1000) + 300,
+            messages: [
+              {
+                address: recipient,
+                amount: nanoTon
+              }
+            ]
+          });
+          state.txHistory.unshift({
+            type: "On-chain Sent",
+            asset: "TON",
+            amount,
+            shortAddr,
+            at: Date.now()
+          });
+          saveState();
+          renderWalletsAndReferral();
+          if (amountEl) amountEl.value = "";
+          if (recipientEl) recipientEl.value = "";
+          if (sendStatus) sendStatus.textContent = `TON transaction approved: ${amount} TON to ${shortAddr}.`;
+        } catch (e) {
+          if (sendStatus) sendStatus.textContent = "TON transaction rejected or failed in wallet.";
+        }
         return;
       }
 
@@ -1237,9 +1318,8 @@
         state.minedTokens = Number((state.minedTokens - amount).toFixed(4));
       }
 
-      const shortAddr = `${recipient.slice(0, 6)}...${recipient.slice(-4)}`;
       state.txHistory.unshift({
-        type: "Sent",
+        type: "Recorded",
         asset,
         amount,
         shortAddr,
@@ -1251,7 +1331,7 @@
       if (amountEl) amountEl.value = "";
       if (recipientEl) recipientEl.value = "";
       if (sendStatus) {
-        sendStatus.textContent = `Transfer recorded: ${amount} ${asset} to ${shortAddr}.`;
+        sendStatus.textContent = `${asset} transfer recorded: ${amount} ${asset} to ${shortAddr}.`;
       }
     }
 
@@ -1274,6 +1354,7 @@
       renderTasks();
       renderMining();
       syncReferralStats(false);
+      initTonConnect();
     }
 
     function openExternalLink(id, url) {
