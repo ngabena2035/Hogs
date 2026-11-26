@@ -1,1523 +1,528 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HOGS ($HG) — Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <style>
+    :root {
+      --bg: #0b0f17;
+      --card: #141b29;
+      --accent: #f5b700;
+      --accent-soft: rgba(245, 183, 0, 0.14);
+      --text: #f3f6fb;
+      --muted: #9aa6bd;
+      --ok: #22c55e;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+
     * {
       box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    @keyframes coinFloat {
-      0%, 100% {
-        transform: translateY(0px) scale(1);
-      }
-      50% {
-        transform: translateY(-6px) scale(1.02);
-      }
-    }
-
-    @keyframes haloPulse {
-      0%, 100% {
-        box-shadow: 0 0 18px rgba(245, 158, 11, 0.3), 0 0 38px rgba(245, 158, 11, 0.14);
-      }
-      50% {
-        box-shadow: 0 0 28px rgba(245, 158, 11, 0.58), 0 0 54px rgba(251, 191, 36, 0.24);
-      }
-    }
-
-    @keyframes panelFadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes subtleShimmer {
-      0%, 100% {
-        border-color: rgba(245, 158, 11, 0.35);
-      }
-      50% {
-        border-color: rgba(251, 191, 36, 0.8);
-      }
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     body {
-      font-family: Arial, sans-serif;
-      background: radial-gradient(circle at top, #1b2234 0%, #111318 65%);
-      color: #ffffff;
-      margin: 0;
-      padding: 16px 16px 96px;
-      text-align: center;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
+      padding: 18px 16px 40px;
     }
 
-    .app-shell {
-      max-width: 440px;
+    .container {
+      max-width: 480px;
       margin: 0 auto;
-    }
-
-    .tab-panel {
-      display: none;
-    }
-
-    .tab-panel.active {
-      display: block;
-      animation: panelFadeIn 0.25s ease-out;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
 
     .card {
-      background: rgba(27, 31, 42, 0.96);
-      border: 1px solid #2b3245;
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 14px;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+      padding: 16px;
     }
 
-    .coin-hero {
+    .header {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      padding: 8px 0 6px;
-    }
-
-    .coin-circle-backdrop {
-      width: 168px;
-      height: 168px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(245, 158, 11, 0.24) 0%, rgba(37, 43, 59, 0.85) 72%, rgba(245, 158, 11, 0.12) 100%);
-      border: 2px solid rgba(251, 191, 36, 0.45);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 8px 0 12px;
-      animation: coinFloat 3.2s ease-in-out infinite, haloPulse 2.8s ease-in-out infinite;
-    }
-
-    .coin-btn {
-      background: transparent;
-      border: none;
-      padding: 0;
-      margin: 0;
-      cursor: pointer;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.18s ease;
-    }
-
-    .coin-btn:active {
-      transform: scale(0.93);
-    }
-
-    .coin-btn img {
-      width: 138px;
-      height: 138px;
-      border-radius: 50%;
-      object-fit: cover;
-      display: block;
-      border: 3px solid #f59e0b;
-    }
-
-    .user-badge {
-      display: inline-block;
-      background: #252b3b;
-      color: #cbd5e1;
-      font-size: 12px;
-      padding: 5px 12px;
-      border-radius: 999px;
-      margin-bottom: 8px;
-      border: 1px solid #334155;
-    }
-
-    .stats-row {
-      display: flex;
       gap: 10px;
-      margin: 12px 0;
+    }
+
+    .title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .sub {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 12px;
     }
 
     .stat-box {
-      flex: 1;
-      background: #252b3b;
-      border-radius: 10px;
-      padding: 12px;
-      font-size: 13px;
-      border: 1px solid #30384d;
-    }
-
-    .stat-box strong {
-      display: block;
-      margin-top: 4px;
-      font-size: 16px;
-      color: #fbbf24;
-    }
-
-    .mining-box {
-      background: #23293a;
-      border: 1px solid #334155;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 14px;
-      margin: 12px 0 4px;
-      text-align: center;
-      animation: subtleShimmer 3.5s ease-in-out infinite;
-    }
-
-    .timer-display {
-      font-family: monospace;
-      font-size: 28px;
-      font-weight: bold;
-      color: #fbbf24;
-      margin: 8px 0;
-      letter-spacing: 1px;
-    }
-
-    .section-title {
-      text-align: left;
-      font-size: 16px;
-      font-weight: bold;
-      margin: 0 0 12px;
-      color: #f8fafc;
-    }
-
-    .box {
-      background: #252b3b;
-      border: 1px solid #30384d;
-      border-radius: 10px;
       padding: 12px;
-      margin: 10px 0;
-      text-align: left;
-      word-break: break-all;
-      font-size: 13px;
     }
 
-    .contract-text {
-      background: #171b24;
-      padding: 8px;
-      border-radius: 6px;
-      margin-top: 6px;
-      font-family: monospace;
-      font-size: 12px;
-      color: #fcd34d;
+    .stat-label {
+      font-size: 0.78rem;
+      color: var(--muted);
     }
 
-    .input-group {
+    .stat-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .mining-center {
       display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .text-input,
-    .select-input {
-      flex: 1;
-      background: #171b24;
-      color: #ffffff;
-      border: 1px solid #3b4661;
-      border-radius: 8px;
-      padding: 9px 10px;
-      font-size: 12px;
-      outline: none;
-    }
-
-    .text-input:focus,
-    .select-input:focus {
-      border-color: #f59e0b;
-    }
-
-    .wallet-pill {
-      display: inline-flex;
+      flex-direction: column;
       align-items: center;
-      gap: 6px;
-      padding: 5px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: bold;
-      background: #171b24;
-      color: #94a3b8;
-      border: 1px solid #334155;
-      margin-top: 6px;
+      text-align: center;
+      padding: 8px 0 4px;
     }
 
-    .wallet-pill.connected {
-      color: #34d399;
-      border-color: #10b981;
-      background: rgba(16, 185, 129, 0.12);
-    }
-
-    .transfer-tabs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .subtab-btn {
-      background: #171b24;
-      color: #cbd5e1;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 8px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .subtab-btn.active {
-      background: rgba(245, 158, 11, 0.18);
-      color: #fbbf24;
-      border-color: #f59e0b;
-    }
-
-    .tx-list {
-      margin-top: 10px;
+    .mine-icon {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      border: 2px solid rgba(245, 183, 0, 0.45);
       display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 150px;
-      overflow-y: auto;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 10px;
     }
 
-    .tx-item {
-      background: #171b24;
-      border: 1px solid #2b3245;
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 11px;
-      color: #e2e8f0;
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
+    .mined-total-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      width: 100%;
+      margin-bottom: 8px;
     }
 
-    .tasks-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    .mined-total-label {
+      font-size: 0.78rem;
+      color: var(--muted);
     }
 
-    .task {
-      background: #252b3b;
-      border: 1px solid #30384d;
-      border-radius: 10px;
-      padding: 12px;
-      text-align: left;
-      transition: transform 0.18s ease, border-color 0.18s ease;
+    .mined-total-value {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-top: 2px;
     }
 
-    .task.completed-task {
-      border-color: rgba(16, 185, 129, 0.45);
-      background: #1e282d;
-    }
-
-    .task:hover {
-      transform: translateY(-2px);
-      border-color: #475569;
-    }
-
-    .task-badge {
-      display: inline-block;
-      margin-left: 8px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: bold;
-      background: rgba(16, 185, 129, 0.16);
-      color: #34d399;
-    }
-
-    .status-msg {
-      margin-top: 6px;
-      font-size: 12px;
-      color: #94a3b8;
-    }
-
-    button.action-btn {
-      display: inline-block;
-      background: linear-gradient(135deg, #f59e0b, #fbbf24);
-      color: #111318;
+    button {
+      width: 100%;
       border: none;
-      border-radius: 8px;
-      padding: 9px 13px;
-      font-weight: bold;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
       cursor: pointer;
-      margin-top: 8px;
-      margin-right: 6px;
-      font-size: 13px;
-      transition: transform 0.15s ease, filter 0.15s ease;
-    }
-
-    button.action-btn:hover:not(:disabled) {
-      filter: brightness(1.06);
-      transform: translateY(-1px);
-    }
-
-    button.action-btn:active:not(:disabled) {
-      transform: scale(0.97);
-    }
-
-    button.btn-secondary {
-      background: #334155;
-      color: #ffffff;
+      background: var(--accent);
+      color: #111;
+      margin-top: 10px;
     }
 
     button:disabled {
-      opacity: 0.45;
+      opacity: 0.5;
       cursor: not-allowed;
     }
 
-    .bottom-nav {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(23, 26, 35, 0.98);
-      backdrop-filter: blur(8px);
-      border-top: 1px solid #2b3245;
-      padding: 8px 10px;
-      z-index: 999;
+    button.secondary {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(245, 183, 0, 0.35);
     }
 
-    .bottom-nav-inner {
-      max-width: 440px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+    input {
+      width: 100%;
+      background: #0d131f;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      margin-top: 8px;
+      font-size: 0.9rem;
     }
 
-    .nav-btn {
-      background: transparent;
-      color: #cbd5e1;
-      border: none;
-      border-radius: 12px;
-      padding: 6px 4px;
-      font-size: 11px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      min-height: 54px;
-      transition: transform 0.15s ease, color 0.2s ease;
+    .status {
+      font-size: 0.85rem;
+      color: var(--ok);
+      margin-top: 8px;
+      min-height: 20px;
+      word-break: break-word;
     }
 
-    .nav-btn:active {
-      transform: scale(0.92);
-    }
-
-    .nav-icon-circle {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: #23293a;
-      border: 1.5px solid #364159;
-      color: #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.18s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-    }
-
-    .nav-icon-svg {
-      width: 18px;
-      height: 18px;
-      fill: currentColor;
-      display: block;
-    }
-
-    .nav-btn:hover .nav-icon-circle {
-      transform: scale(1.06);
-      border-color: #f59e0b;
-      color: #fbbf24;
-    }
-
-    .nav-btn.active {
-      color: #fbbf24;
-    }
-
-    .nav-btn.active .nav-icon-circle {
-      background: linear-gradient(135deg, #f59e0b, #fbbf24);
-      color: #111318;
-      border-color: #fde68a;
-      box-shadow: 0 0 16px rgba(251, 191, 36, 0.65);
-      transform: translateY(-2px) scale(1.06);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .coin-circle-backdrop,
-      .mining-box,
-      .tab-panel.active {
-        animation: none;
-      }
+    .ref-link {
+      background: #0d131f;
+      border: 1px dashed rgba(245, 183, 0, 0.45);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.82rem;
+      color: var(--accent);
+      margin-top: 8px;
+      word-break: break-all;
     }
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <!-- 1. TASKS -->
-    <section id="panel-tasks" class="tab-panel">
-      <div class="card">
-        <div class="section-title">All Tasks & Community Session</div>
-        <div class="stat-box" style="margin-bottom: 12px; text-align: left;">
-          <div>Tasks Rewards Balance</div>
-          <strong>$<span id="task-balance">0</span></strong>
-        </div>
-        <div id="tasks-container" class="tasks-grid"></div>
-      </div>
-    </section>
-
-    <!-- 2. MINING -->
-    <section id="panel-mining" class="tab-panel active">
-      <div class="card">
-        <div id="user-badge" class="user-badge">Member: Guest</div>
-        <div class="coin-hero">
-          <div class="coin-circle-backdrop">
-            <button class="coin-btn" type="button" onclick="handleCoinTap()" title="HOGS Coin">
-              <img src="1795313325197.jpg" alt="HOGS Coin" />
-            </button>
-          </div>
-          <h1 style="margin: 4px 0;">HOGS ($HG)</h1>
-          <div class="status-msg">Tap the coin or start your 3-hour mining session.</div>
-        </div>
-
-        <div class="mining-box">
-          <div><strong>Mining Session (every 3 hours)</strong></div>
-          <div class="status-msg">Reward per cycle: <strong>$200</strong> + <strong>25 $HG</strong></div>
-          <div id="timer-display" class="timer-display">03:00:00</div>
-          <button id="mine-btn" class="action-btn" type="button" onclick="handleMiningButton()">Start Mining (3h)</button>
-          <div id="mining-status" class="status-msg">Press the button to start a 3-hour mining cycle.</div>
+  <div class="container">
+    <!-- Écran principal : En-tête, Points & Minage 3h -->
+    <div class="card">
+      <div class="header">
+        <div>
+          <div class="title">HOGS ($HG)</div>
+          <div class="sub" id="player-greeting">Bienvenue sur la Mini App HOGS</div>
         </div>
       </div>
-    </section>
 
-    <!-- 3. REFERRAL -->
-    <section id="panel-referral" class="tab-panel">
-      <div class="card">
-        <div class="section-title">Referral & Player Invite Link</div>
-        <div class="stat-box" style="margin-bottom: 12px;">
-          <div>Invited Players</div>
-          <strong><span id="referral-count">0</span></strong>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Points</div>
+          <div class="stat-value" id="points-value">0</div>
         </div>
-
-        <div class="box">
-          <div><strong>Player Invite Link:</strong></div>
-          <div id="referral-link" class="contract-text">https://t.me/HOGSCOM_BOT?start=ref_player</div>
-          <button id="copy-ref-btn" class="action-btn" type="button" onclick="copyReferralLink()">Copy Player Link</button>
-          <button id="refresh-ref-btn" class="action-btn btn-secondary" type="button" onclick="syncReferralStats(true)">Refresh Count</button>
-          <div id="ref-copy-status" class="status-msg"></div>
-          <div id="ref-invite-lock-status" class="status-msg">One-time invite rule: an account can only be invited once.</div>
-          <div id="ref-sync-status" class="status-msg">Counts players who open @HOGSCOM_BOT through your link.</div>
+        <div class="stat-box">
+          <div class="stat-label">Tâches accomplies</div>
+          <div class="stat-value" id="tasks-count">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Filleuls validés</div>
+          <div class="stat-value" id="ref-count">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Wallet TON</div>
+          <div class="stat-value" id="wallet-short" style="font-size: 0.88rem;">Non lié</div>
         </div>
       </div>
-    </section>
 
-    <!-- 4. WALLET (TON BLOCKCHAIN CONNECT + RECEIVE & SEND) -->
-    <section id="panel-crops" class="tab-panel">
-      <div class="card">
-        <div class="section-title">TON Blockchain Wallet — Cryptos & Memes</div>
-        <div class="stats-row">
-          <div class="stat-box">
-            <div>Mined Tokens</div>
-            <strong><span id="mined-tokens-count">0</span> $HG</strong>
-          </div>
-          <div class="stat-box">
-            <div>Mining Balance</div>
-            <strong>$<span id="mining-balance">0</span></strong>
-          </div>
+      <!-- Zone centrale de minage : Icône -> Total miné en $HG -> Bouton -->
+      <div class="mining-center" style="margin-top: 14px;">
+        <div class="mine-icon" aria-hidden="true">⛏️</div>
+
+        <div class="mined-total-box">
+          <div class="mined-total-label">Total miné</div>
+          <div class="mined-total-value" id="mined-hg-total">0 $HG</div>
         </div>
 
-        <div class="box">
-          <div><strong>TON Blockchain Connection:</strong></div>
-          <div id="wallet-pill" class="wallet-pill">Disconnected</div>
-          <div id="wallet-addr-display" class="contract-text" style="display: none;"></div>
-          <div class="input-group">
-            <button id="connect-wallet-btn" class="action-btn" style="margin-top: 0; flex: 1;" type="button" onclick="toggleWalletConnection()">Connect TON Wallet</button>
-            <button id="open-tonviewer-wallet-btn" class="action-btn btn-secondary" style="margin-top: 0; margin-right: 0;" type="button" onclick="openConnectedTonExplorer()">TON Explorer</button>
-          </div>
-          <div id="wallet-status" class="status-msg">Connect your Telegram or TON wallet to link directly to the TON blockchain.</div>
-        </div>
-
-        <div class="box">
-          <div><strong>Receive & Send Cryptos / Memes:</strong></div>
-          <div class="transfer-tabs">
-            <button id="subtab-receive" class="subtab-btn active" type="button" onclick="switchWalletAction('receive')">Receive</button>
-            <button id="subtab-send" class="subtab-btn" type="button" onclick="switchWalletAction('send')">Send</button>
-          </div>
-
-          <div id="wallet-receive-box" style="margin-top: 10px;">
-            <div class="status-msg">Share your connected TON address to receive cryptos & memes ($HG, TON, GRAM, MEME):</div>
-            <div id="receive-addr-text" class="contract-text">Connect a TON wallet first</div>
-            <button id="copy-receive-btn" class="action-btn" type="button" onclick="copyReceiveAddress()">Copy Receive Address</button>
-            <div id="receive-status" class="status-msg"></div>
-          </div>
-
-          <div id="wallet-send-box" style="display: none; margin-top: 10px;">
-            <div class="input-group">
-              <select id="send-asset-select" class="select-input">
-                <option value="TON">TON (On-chain via TON Connect)</option>
-                <option value="$HG">$HG (Meme Token)</option>
-                <option value="GRAM">GRAM</option>
-                <option value="MEME">MEME</option>
-              </select>
-              <input
-                id="send-amount-input"
-                class="text-input"
-                type="number"
-                min="0.01"
-                step="any"
-                placeholder="Amount"
-              />
-            </div>
-            <div class="input-group">
-              <input
-                id="send-recipient-input"
-                class="text-input"
-                type="text"
-                placeholder="Recipient TON address (UQ... or EQ...)"
-              />
-              <button id="send-crypto-btn" class="action-btn" style="margin-top: 0; margin-right: 0;" type="button" onclick="handleSendCrypto()">Send</button>
-            </div>
-            <div id="send-status" class="status-msg">TON transfers open your connected TON wallet for signing.</div>
-          </div>
-
-          <div style="margin-top: 12px;">
-            <strong>Recent Activity:</strong>
-            <div id="tx-history-list" class="tx-list">
-              <div class="tx-item"><span>No crypto or meme transfers yet.</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="box">
-          <div><strong>$HG Contract (TON):</strong></div>
-          <div id="contract-addr" class="contract-text">EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un</div>
-          <button id="copy-btn" class="action-btn" type="button" onclick="copyContract()">Copy Contract</button>
-          <button class="action-btn btn-secondary" type="button" onclick="openExternalLink(null, 'https://tonviewer.com/EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un')">View on Tonviewer</button>
-          <div id="copy-status" class="status-msg"></div>
-        </div>
+        <div class="sub" id="mine-timer">Cycle de 3h : mine 200 $HG toutes les 3 heures</div>
+        <button id="mine-btn" onclick="claimMining()">Réclamer le minage (+200 $HG)</button>
       </div>
-    </section>
+    </div>
+
+    <!-- Tâche communautaire -->
+    <div class="card">
+      <div style="font-weight: 700;">Tâche communautaire</div>
+      <div class="sub">Rejoins la communauté officielle Telegram puis vérifie ton adhésion.</div>
+      <button class="secondary" onclick="openCommunity()">Ouvrir le groupe / canal</button>
+      <button id="verify-task-btn" onclick="verifyCommunityTask()">Vérifier ma tâche (+50 Points)</button>
+    </div>
+
+    <!-- Parrainage -->
+    <div class="card">
+      <div style="font-weight: 700;">Parrainage unique</div>
+      <div class="sub" id="ref-lock-info">Un compte ne peut être invité qu'une seule fois.</div>
+      <div class="ref-link" id="my-ref-link">Chargement du lien...</div>
+      <button class="secondary" onclick="copyRefLink()">Copier mon lien de parrainage</button>
+    </div>
+
+    <!-- Portefeuille TON -->
+    <div class="card">
+      <div style="font-weight: 700;">Adresse TON pour l'airdrop</div>
+      <div class="sub">Enregistre ton adresse TON (UQ... ou EQ...) pour recevoir ta part d'airdrop.</div>
+      <input id="wallet-input" type="text" placeholder="Ex. UQ..." />
+      <button onclick="saveWalletAddress()">Enregistrer l'adresse TON</button>
+      <div class="status" id="status-msg"></div>
+    </div>
   </div>
 
-  <!-- BARRE DU BAS : 4 LOGOS DANS DES FONDS EN CERCLE, DORÉS AU CLIC -->
-  <nav class="bottom-nav" aria-label="Main Navigation">
-    <div class="bottom-nav-inner">
-      <button id="nav-tasks" class="nav-btn" type="button" data-tab="tasks">
-        <span class="nav-icon-circle">
-          <svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm1 5v2h8V8H8zm0 4v2h8v-2H8zm0 4v2h5v-2H8z"/>
-          </svg>
-        </span>
-        <span>Tasks</span>
-      </button>
-
-      <button id="nav-mining" class="nav-btn active" type="button" data-tab="mining">
-        <span class="nav-icon-circle">
-          <svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-1.1c-1.1-.2-2-.9-2.2-2h2c.2.4.6.6 1.2.6.7 0 1.2-.3 1.2-.8 0-.6-.5-.9-1.4-1.1-1.3-.3-2.4-.8-2.4-2.3 0-1.2.8-2 2-2.2V6h2v1.1c1 .2 1.8.8 2 1.8h-2c-.2-.3-.5-.5-1-.5-.6 0-1.1.3-1.1.8 0 .5.4.8 1.5 1 1.4.3 2.3.9 2.3 2.4 0 1.3-.8 2.1-2.2 2.3V17z"/>
-          </svg>
-        </span>
-        <span>Mining</span>
-      </button>
-
-      <button id="nav-referral" class="nav-btn" type="button" data-tab="referral">
-        <span class="nav-icon-circle">
-          <svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-          </svg>
-        </span>
-        <span>Referral</span>
-      </button>
-
-      <button id="nav-crops" class="nav-btn" type="button" data-tab="crops">
-        <span class="nav-icon-circle">
-          <svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M19 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1h-4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h4V8a2 2 0 0 0-2-2zm-2 5a1 1 0 1 0 0 2h3v-2h-3zM6 4h11v1H6V4z"/>
-          </svg>
-        </span>
-        <span>Wallet</span>
-      </button>
-    </div>
-  </nav>
-
   <script>
-    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
-    const MINING_REWARD = 200;
-    const MINED_TOKENS_PER_CYCLE = 25;
-    const TASK_REWARD_USD = 10;
-    const TASK_PROCESS_MS = 15 * 1000;
-    const VERIFY_ENDPOINT = "https://hogs-verify.kevinngabena.workers.dev";
-    const TON_MANIFEST_URL = "https://ngabena2035.github.io/Hogs/tonconnect-manifest.json";
+    const HOGS_WORKER_URL = "https://hogs-verify.kevinngabena.workers.dev/";
+    const MINI_APP_URL = "https://ngabena2035.github.io/Hogs/";
+    const COMMUNITY_USERNAME = "COMMUNAUTE_HOGS";
+    const MINING_COOLDOWN_MS = 3 * 60 * 60 * 1000;
+    const MINING_REWARD_HG = 200;
+    const TASK_REWARD_POINTS = 50;
 
-    const TASKS = [
-      {
-        id: "task1",
-        title: "Join Session: HOGS COMMUNITY",
-        rewardUsd: TASK_REWARD_USD,
-        chatUsername: "COMMUNAUTE_HOGS",
-        buttonLabel: "Join Telegram",
-        url: "https://t.me/COMMUNAUTE_HOGS",
-        hint: "Join HOGS COMMUNITY first, then click Claim."
-      },
-      {
-        id: "task2",
-        title: "Discover $HG on STON.fi",
-        rewardUsd: TASK_REWARD_USD,
-        chatUsername: null,
-        buttonLabel: "Open STON.fi",
-        url: "https://app.ston.fi/swap?chartVisible=false&ft=TON&tt=EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un",
-        hint: "Click \"Open STON.fi\" first to enable Claim."
-      }
-    ];
-
-    function switchTab(tabName) {
-      const tabs = ["tasks", "mining", "referral", "crops"];
-      tabs.forEach((name) => {
-        const panel = document.getElementById("panel-" + name);
-        const navBtn = document.getElementById("nav-" + name);
-        const isSelected = name === tabName;
-        if (panel) panel.classList.toggle("active", isSelected);
-        if (navBtn) navBtn.classList.toggle("active", isSelected);
-      });
-      if (tabName === "referral") {
-        syncReferralStats(false);
-      }
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
     }
 
-    document.querySelectorAll(".nav-btn[data-tab]").forEach((btn) => {
-      btn.addEventListener("click", function () {
-        const target = this.getAttribute("data-tab");
-        if (target) switchTab(target);
-      });
-    });
+    function getHogsPlayerIdentity() {
+      const tgUser =
+        window.Telegram &&
+        window.Telegram.WebApp &&
+        window.Telegram.WebApp.initDataUnsafe
+          ? window.Telegram.WebApp.initDataUnsafe.user
+          : null;
 
-    let tg = null;
-    let tgUser = null;
-    let startParam = "";
-    try {
-      tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-      if (tg) {
-        if (typeof tg.ready === "function") tg.ready();
-        if (typeof tg.expand === "function") tg.expand();
-        tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
-        startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? String(tg.initDataUnsafe.start_param) : "";
+      let fallbackId = localStorage.getItem("hogs_guest_id");
+      if (!fallbackId) {
+        fallbackId = "guest_" + Date.now();
+        localStorage.setItem("hogs_guest_id", fallbackId);
       }
-    } catch (e) {
-      tg = null;
-      tgUser = null;
-      startParam = "";
+
+      const userId = tgUser && tgUser.id ? tgUser.id : fallbackId;
+      return {
+        userId,
+        username: tgUser && tgUser.username ? tgUser.username : "",
+        firstName: tgUser && tgUser.first_name ? tgUser.first_name : "Player",
+        refCode: "ref_" + userId
+      };
     }
 
-    if (!startParam) {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        startParam = urlParams.get("start") || urlParams.get("tgWebAppStartParam") || "";
-      } catch (e) {}
-    }
+    const identity = getHogsPlayerIdentity();
 
-    const PLAYER_STORAGE_KEY = "hogs_player_ref_id_v1";
-    function getOrCreatePlayerRefCode() {
-      if (tgUser && tgUser.id) {
-        return `ref_${tgUser.id}`;
-      }
-      try {
-        let savedCode = localStorage.getItem(PLAYER_STORAGE_KEY);
-        if (!savedCode) {
-          savedCode = "ref_" + Math.random().toString(36).substring(2, 8);
-          localStorage.setItem(PLAYER_STORAGE_KEY, savedCode);
-        }
-        return savedCode;
-      } catch (e) {
-        return "ref_guest";
-      }
-    }
-
-    const playerRefCode = getOrCreatePlayerRefCode();
-    const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : playerRefCode;
-    const STORAGE_KEY = `hogs_miniapp_state_v15_${userKey}`;
-    const INVITED_LOCK_KEY = `hogs_invited_once_lock_${userKey}`;
-
-    const displayUser = tgUser
-      ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
-      : "Guest";
-
-    const badgeEl = document.getElementById("user-badge");
-    if (badgeEl) badgeEl.textContent = `Member: ${displayUser}`;
-
-    const refBase = "https://t.me/HOGSCOM_BOT";
-    const refLink = `${refBase}?start=${playerRefCode}`;
-    const refLinkEl = document.getElementById("referral-link");
-    if (refLinkEl) refLinkEl.textContent = refLink;
-
-    const defaultState = {
-      taskBalance: 0,
-      done: {},
-      pending: {},
-      miningBalance: 0,
-      minedTokens: 0,
-      referralCount: 0,
-      referredBy: "",
-      inviteLocked: false,
-      walletAddress: "",
-      txHistory: [],
-      miningEndTime: null,
-      miningPendingClaim: false
+    let state = {
+      minedTokens: Number(localStorage.getItem("hogs_mined_tokens") || "0"),
+      points: Number(localStorage.getItem("hogs_points") || "0"),
+      lastMineAt: Number(localStorage.getItem("hogs_last_mine_at") || "0"),
+      completedTasks: JSON.parse(localStorage.getItem("hogs_completed_tasks") || "[]"),
+      walletAddress: localStorage.getItem("hogs_wallet_address") || "",
+      referredBy: localStorage.getItem("hogs_referred_by") || "",
+      referralCount: Number(localStorage.getItem("hogs_referral_count") || "0")
     };
 
-    function loadInitialState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { ...defaultState };
-        const parsed = JSON.parse(raw);
-        return {
-          ...defaultState,
-          ...(parsed && typeof parsed === "object" ? parsed : {}),
-          done: parsed && parsed.done && typeof parsed.done === "object" ? parsed.done : {},
-          pending: parsed && parsed.pending && typeof parsed.pending === "object" ? parsed.pending : {},
-          txHistory: Array.isArray(parsed && parsed.txHistory) ? parsed.txHistory : []
-        };
-      } catch (e) {
-        return { ...defaultState };
-      }
+    function setStatus(msg) {
+      document.getElementById("status-msg").textContent = msg;
     }
 
-    let state = loadInitialState();
-    if (typeof state.miningBalance !== "number") state.miningBalance = 0;
-    if (typeof state.minedTokens !== "number") state.minedTokens = 0;
-    if (typeof state.taskBalance !== "number") state.taskBalance = 0;
-    if (typeof state.referralCount !== "number") state.referralCount = 0;
-
-    try {
-      const savedLock = localStorage.getItem(INVITED_LOCK_KEY);
-      if (savedLock) {
-        state.inviteLocked = true;
-        if (!state.referredBy) state.referredBy = savedLock;
-      }
-    } catch (e) {}
-
-    const taskTimers = {};
-
-    function saveState() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        if (state.inviteLocked && state.referredBy) {
-          localStorage.setItem(INVITED_LOCK_KEY, state.referredBy);
-        }
-      } catch (e) {}
+    function saveLocalState() {
+      localStorage.setItem("hogs_mined_tokens", String(state.minedTokens));
+      localStorage.setItem("hogs_points", String(state.points));
+      localStorage.setItem("hogs_last_mine_at", String(state.lastMineAt));
+      localStorage.setItem("hogs_completed_tasks", JSON.stringify(state.completedTasks));
+      localStorage.setItem("hogs_wallet_address", state.walletAddress);
+      localStorage.setItem("hogs_referred_by", state.referredBy);
+      localStorage.setItem("hogs_referral_count", String(state.referralCount));
     }
 
-    let tonConnectUI = null;
-    function initTonConnect() {
-      const walletStatus = document.getElementById("wallet-status");
-      try {
-        if (!window.TON_CONNECT_UI || !window.TON_CONNECT_UI.TonConnectUI) {
-          if (walletStatus) {
-            walletStatus.textContent = "TON Connect SDK not loaded yet. Check your internet connection.";
-          }
-          return;
-        }
+    function renderUI() {
+      document.getElementById("player-greeting").textContent =
+        `Connecté : ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""}`;
+      document.getElementById("mined-hg-total").textContent = `${state.minedTokens} $HG`;
+      document.getElementById("points-value").textContent = state.points;
+      document.getElementById("tasks-count").textContent = state.completedTasks.length;
+      document.getElementById("ref-count").textContent = state.referralCount;
 
-        tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
-          manifestUrl: TON_MANIFEST_URL,
-          actionsConfiguration: {
-            twaReturnUrl: refBase
-          }
-        });
-
-        tonConnectUI.onStatusChange((wallet) => {
-          if (wallet && wallet.account && wallet.account.address) {
-            state.walletAddress = wallet.account.address;
-            saveState();
-            renderWalletUI();
-            if (walletStatus) {
-              const chainName = wallet.account.chain === "-3" ? "TON Testnet" : "TON Mainnet";
-              walletStatus.textContent = `Connected to ${chainName} via TON Connect.`;
-            }
-          } else {
-            state.walletAddress = "";
-            saveState();
-            renderWalletUI();
-            if (walletStatus) {
-              walletStatus.textContent = "Disconnected from TON blockchain.";
-            }
-          }
-        });
-      } catch (e) {
-        if (walletStatus) {
-          walletStatus.textContent = "Unable to initialize TON Connect. Verify tonconnect-manifest.json.";
-        }
-      }
-    }
-
-    function normalizeRefCode(rawCode) {
-      const clean = String(rawCode || "").trim();
-      if (!clean) return "";
-      return clean.startsWith("ref_") ? clean : `ref_${clean}`;
-    }
-
-    function updateInviteLockUI(extraNotice) {
-      const lockEl = document.getElementById("ref-invite-lock-status");
-      if (!lockEl) return;
-
-      if (extraNotice) {
-        lockEl.textContent = extraNotice;
-        return;
-      }
-
-      if (state.inviteLocked && state.referredBy) {
-        lockEl.textContent = `Invite locked: this account was already invited once (${state.referredBy}). No second invite allowed.`;
+      const walletEl = document.getElementById("wallet-short");
+      if (state.walletAddress) {
+        walletEl.textContent =
+          state.walletAddress.slice(0, 5) + "..." + state.walletAddress.slice(-4);
+        document.getElementById("wallet-input").value = state.walletAddress;
       } else {
-        lockEl.textContent = "One-time invite rule: an account can only be invited once.";
+        walletEl.textContent = "Non lié";
+      }
+
+      const myRefUrl = `${MINI_APP_URL}?startapp=${encodeURIComponent(identity.refCode)}`;
+      document.getElementById("my-ref-link").textContent = myRefUrl;
+
+      const lockInfo = document.getElementById("ref-lock-info");
+      if (state.referredBy) {
+        lockInfo.textContent = `Invitation verrouillée par : ${state.referredBy}`;
+      } else {
+        lockInfo.textContent = "Un compte ne peut être invité qu'une seule fois.";
+      }
+
+      const taskBtn = document.getElementById("verify-task-btn");
+      if (state.completedTasks.includes("join_community")) {
+        taskBtn.textContent = "Tâche communautaire validée";
+        taskBtn.disabled = true;
+      }
+
+      updateMiningTimer();
+    }
+
+    function updateMiningTimer() {
+      const remaining = state.lastMineAt + MINING_COOLDOWN_MS - Date.now();
+      const mineBtn = document.getElementById("mine-btn");
+      const timerEl = document.getElementById("mine-timer");
+
+      if (remaining <= 0) {
+        mineBtn.disabled = false;
+        timerEl.textContent = "Cycle de 3h terminé : réclame tes 200 $HG !";
+      } else {
+        mineBtn.disabled = true;
+        const totalSec = Math.ceil(remaining / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        timerEl.textContent = `Prochain cycle (200 $HG) dans ${h}h ${m}m ${s}s`;
       }
     }
 
-    async function syncReferralStats(manualClick) {
-      const syncEl = document.getElementById("ref-sync-status");
-      const incomingRef = normalizeRefCode(startParam);
-      let candidateReferrerToClaim = "";
+    async function syncHogsProgress({ minedTokens, points, completedTasks, walletAddress, referredBy }) {
+      const currentIdentity = getHogsPlayerIdentity();
 
-      if (incomingRef && incomingRef !== playerRefCode) {
-        if (!state.inviteLocked && !state.referredBy) {
-          state.referredBy = incomingRef;
-          state.inviteLocked = true;
-          candidateReferrerToClaim = incomingRef;
-          saveState();
-          updateInviteLockUI();
-        } else if (state.referredBy && state.referredBy !== incomingRef) {
-          updateInviteLockUI(`Second invite ignored: account is already bound to ${state.referredBy}.`);
+      const payload = {
+        action: "progress_sync",
+        userId: currentIdentity.userId,
+        username: currentIdentity.username,
+        firstName: currentIdentity.firstName,
+        refCode: currentIdentity.refCode,
+        referredBy: referredBy || localStorage.getItem("hogs_referred_by") || "",
+        walletAddress: walletAddress || localStorage.getItem("hogs_wallet_address") || "",
+        minedTokens: Number(minedTokens !== undefined ? minedTokens : state.minedTokens),
+        points: Number(points !== undefined ? points : state.points),
+        completedTasks: Array.isArray(completedTasks) ? completedTasks : state.completedTasks
+      };
+
+      try {
+        const response = await fetch(HOGS_WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        return await response.json();
+      } catch (err) {
+        console.error("Erreur progress_sync:", err);
+        return { ok: false };
+      }
+    }
+
+    async function claimMining() {
+      if (state.lastMineAt + MINING_COOLDOWN_MS > Date.now()) return;
+      state.minedTokens += MINING_REWARD_HG;
+      state.lastMineAt = Date.now();
+      saveLocalState();
+      renderUI();
+      setStatus(`+${MINING_REWARD_HG} $HG minés ! Synchronisation en cours...`);
+
+      const res = await syncHogsProgress({ minedTokens: state.minedTokens });
+      if (res && res.ok) {
+        setStatus(`+${MINING_REWARD_HG} $HG enregistrés sur ta fiche joueur.`);
+      }
+    }
+
+    function openCommunity() {
+      const url = `https://t.me/${COMMUNITY_USERNAME}`;
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(url);
+      } else {
+        window.open(url, "_blank");
+      }
+    }
+
+    async function verifyCommunityTask() {
+      if (state.completedTasks.includes("join_community")) return;
+      setStatus("Vérification de l'adhésion au groupe...");
+
+      try {
+        const response = await fetch(HOGS_WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatUsername: COMMUNITY_USERNAME,
+            userId: identity.userId
+          })
+        });
+        const data = await response.json();
+
+        if (data && data.isMember) {
+          state.completedTasks.push("join_community");
+          state.points += TASK_REWARD_POINTS;
+          saveLocalState();
+          renderUI();
+          await syncHogsProgress({
+            minedTokens: state.minedTokens,
+            points: state.points,
+            completedTasks: state.completedTasks
+          });
+          setStatus(`Adhésion confirmée ! +${TASK_REWARD_POINTS} Points ajoutés.`);
         } else {
-          updateInviteLockUI();
+          setStatus(`Abonnement non détecté (${data.status || "vérifie le groupe"}).`);
         }
-      } else {
-        updateInviteLockUI();
+      } catch (err) {
+        setStatus("Erreur lors de la vérification de la tâche.");
       }
+    }
 
-      if (!VERIFY_ENDPOINT) {
-        if (syncEl) syncEl.textContent = "Local referral counter active.";
-        return;
-      }
-
-      if (manualClick && syncEl) {
-        syncEl.textContent = "Syncing invited players count...";
-      }
+    async function syncReferralOnStart() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const startParam =
+        (window.Telegram &&
+          window.Telegram.WebApp &&
+          window.Telegram.WebApp.initDataUnsafe &&
+          window.Telegram.WebApp.initDataUnsafe.start_param) ||
+        urlParams.get("startapp") ||
+        "";
 
       try {
-        const res = await fetch(VERIFY_ENDPOINT, {
+        const response = await fetch(HOGS_WORKER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "referral_sync",
-            refCode: playerRefCode,
-            referredBy: candidateReferrerToClaim || state.referredBy || "",
-            inviteLocked: Boolean(state.inviteLocked),
-            userId: tgUser && tgUser.id ? tgUser.id : null,
-            initData: tg && tg.initData ? tg.initData : ""
+            userId: identity.userId,
+            refCode: identity.refCode,
+            referredBy: startParam || state.referredBy
           })
         });
-
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data && typeof data.referralCount === "number") {
-          state.referralCount = data.referralCount;
+        const data = await response.json();
+        if (data && data.ok) {
+          state.referralCount = Number(data.referralCount || 0);
           if (data.lockedReferrer) {
-            state.referredBy = normalizeRefCode(data.lockedReferrer);
-            state.inviteLocked = true;
+            state.referredBy = data.lockedReferrer;
           }
-          saveState();
-          renderWalletsAndReferral();
-          updateInviteLockUI();
-          if (syncEl) {
-            syncEl.textContent = data.alreadyInvited
-              ? `Synced: ${state.referralCount} invited player(s) (account already counted once).`
-              : `Synced: ${state.referralCount} player(s) joined via your link.`;
-          }
+          saveLocalState();
+          renderUI();
+          await syncHogsProgress({ referredBy: state.referredBy });
         }
-      } catch (e) {
-        if (manualClick && syncEl) {
-          syncEl.textContent = "Showing saved referral count (offline/check bot webhook).";
-        }
+      } catch (err) {
+        console.error("Erreur referral_sync:", err);
       }
     }
 
-    function isValidWalletAddress(addr) {
-      const clean = addr.trim();
-      return /^(UQ|EQ|kQ|0Q)[A-Za-z0-9_-]{46}$/.test(clean) || /^-?\d+:[0-9a-fA-F]{64}$/.test(clean);
+    function copyRefLink() {
+      const text = document.getElementById("my-ref-link").textContent;
+      navigator.clipboard?.writeText(text);
+      setStatus("Lien de parrainage copié !");
     }
 
-    function formatDuration(ms) {
-      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      return [hours, minutes, seconds].map((n) => String(n).padStart(2, "0")).join(":");
-    }
-
-    function renderMining() {
-      const timerEl = document.getElementById("timer-display");
-      const mineBtn = document.getElementById("mine-btn");
-      const miningStatus = document.getElementById("mining-status");
-      const balanceEl = document.getElementById("mining-balance");
-
-      if (balanceEl) balanceEl.textContent = state.miningBalance;
-      if (!timerEl || !mineBtn || !miningStatus) return;
-
-      if (state.miningEndTime && !state.miningPendingClaim) {
-        const remaining = state.miningEndTime - Date.now();
-        if (remaining > 0) {
-          timerEl.textContent = formatDuration(remaining);
-          mineBtn.disabled = true;
-          mineBtn.textContent = "Mining in progress...";
-          miningStatus.textContent = "Come back in 3 hours to claim $200 + 25 $HG and restart.";
-          return;
-        } else {
-          state.miningPendingClaim = true;
-          state.miningEndTime = null;
-          saveState();
-        }
-      }
-
-      if (state.miningPendingClaim) {
-        timerEl.textContent = "00:00:00";
-        mineBtn.disabled = false;
-        mineBtn.textContent = "Claim +$200";
-        miningStatus.textContent = "Cycle complete! Click to claim $200 + 25 $HG and restart.";
+    async function saveWalletAddress() {
+      const val = document.getElementById("wallet-input").value.trim();
+      if (!val || val.length < 20) {
+        setStatus("Entre une adresse TON valide (UQ... ou EQ...).");
         return;
       }
+      state.walletAddress = val;
+      saveLocalState();
+      renderUI();
 
-      timerEl.textContent = "03:00:00";
-      mineBtn.disabled = false;
-      mineBtn.textContent = "Start Mining (3h)";
-      miningStatus.textContent = "Press the button to start a 3-hour mining cycle.";
-    }
-
-    function handleMiningButton() {
-      if (state.miningPendingClaim) {
-        state.miningBalance += MINING_REWARD;
-        state.minedTokens += MINED_TOKENS_PER_CYCLE;
-        state.miningPendingClaim = false;
-        state.miningEndTime = Date.now() + THREE_HOURS_MS;
-        saveState();
-        renderWalletsAndReferral();
-        renderMining();
-        const ms = document.getElementById("mining-status");
-        if (ms) ms.textContent = `+$200 and +${MINED_TOKENS_PER_CYCLE} $HG added! New 3-hour cycle started.`;
-        return;
-      }
-
-      if (!state.miningEndTime) {
-        state.miningEndTime = Date.now() + THREE_HOURS_MS;
-        state.miningPendingClaim = false;
-        saveState();
-        renderMining();
-        const ms = document.getElementById("mining-status");
-        if (ms) ms.textContent = "3-hour mining session started!";
-      }
-    }
-
-    function handleCoinTap() {
-      if (state.miningPendingClaim || !state.miningEndTime) {
-        handleMiningButton();
+      const res = await syncHogsProgress({ walletAddress: state.walletAddress });
+      if (res && res.ok) {
+        setStatus("Adresse TON enregistrée pour l'airdrop.");
       } else {
-        switchTab("crops");
+        setStatus("Adresse TON sauvegardée localement.");
       }
     }
 
-    function finalizeTaskClaim(taskId, rewardUsd) {
-      if (taskTimers[taskId]) {
-        clearTimeout(taskTimers[taskId]);
-        delete taskTimers[taskId];
-      }
-      if (!state.done[taskId]) {
-        state.done[taskId] = true;
-        delete state.pending[taskId];
-        state.taskBalance += rewardUsd;
-        saveState();
-      }
-      const tb = document.getElementById("task-balance");
-      if (tb) tb.textContent = state.taskBalance;
-      renderTasks();
-    }
-
-    function scheduleTaskCompletion(task) {
-      if (taskTimers[task.id]) {
-        clearTimeout(taskTimers[task.id]);
-      }
-      const startAt = state.pending[task.id] || Date.now();
-      const remaining = Math.max(0, TASK_PROCESS_MS - (Date.now() - startAt));
-
-      taskTimers[task.id] = setTimeout(() => {
-        finalizeTaskClaim(task.id, task.rewardUsd);
-      }, remaining);
-    }
-
-    function syncPendingTasksOnLoad() {
-      TASKS.forEach((task) => {
-        if (!state.done[task.id] && state.pending[task.id]) {
-          const elapsed = Date.now() - state.pending[task.id];
-          if (elapsed >= TASK_PROCESS_MS) {
-            finalizeTaskClaim(task.id, task.rewardUsd);
-          } else {
-            scheduleTaskCompletion(task);
-          }
-        }
-      });
-    }
-
-    function renderTasks() {
-      const container = document.getElementById("tasks-container");
-      if (!container) return;
-      container.innerHTML = "";
-
-      TASKS.forEach((task) => {
-        const isDone = Boolean(state.done[task.id]);
-        const isPending = Boolean(state.pending[task.id]);
-        const card = document.createElement("div");
-        card.className = "task" + (isDone ? " completed-task" : "");
-        card.id = "card-" + task.id;
-
-        const titleDiv = document.createElement("div");
-        const strong = document.createElement("strong");
-        strong.textContent = task.title;
-        titleDiv.appendChild(strong);
-        titleDiv.appendChild(document.createTextNode(` (+$${task.rewardUsd})`));
-
-        if (isDone) {
-          const badge = document.createElement("span");
-          badge.className = "task-badge";
-          badge.textContent = "Completed";
-          titleDiv.appendChild(badge);
-        }
-
-        const openBtn = document.createElement("button");
-        openBtn.type = "button";
-        openBtn.className = "action-btn";
-        openBtn.textContent = task.buttonLabel;
-        openBtn.disabled = isDone || isPending;
-        openBtn.onclick = () => openExternalLink(task.id, task.url);
-
-        const claimBtn = document.createElement("button");
-        claimBtn.type = "button";
-        claimBtn.className = "action-btn";
-        claimBtn.id = "btn-" + task.id;
-
-        const statusDiv = document.createElement("div");
-        statusDiv.className = "status-msg";
-        statusDiv.id = "status-" + task.id;
-
-        if (isDone) {
-          claimBtn.disabled = true;
-          claimBtn.textContent = "Claimed";
-          statusDiv.textContent = `Reward of +$${task.rewardUsd} credited to your tasks balance.`;
-        } else if (isPending) {
-          const leftSec = Math.max(1, Math.ceil((TASK_PROCESS_MS - (Date.now() - state.pending[task.id])) / 1000));
-          claimBtn.disabled = true;
-          claimBtn.textContent = "Processing...";
-          statusDiv.textContent = `Verifying (${leftSec}s): +$${task.rewardUsd} credit at 15s.`;
-        } else {
-          claimBtn.disabled = true;
-          claimBtn.textContent = "Claim";
-          claimBtn.onclick = () => claimTask(task.id, task.rewardUsd);
-          statusDiv.textContent = task.hint;
-        }
-
-        card.appendChild(titleDiv);
-        card.appendChild(openBtn);
-        card.appendChild(claimBtn);
-        card.appendChild(statusDiv);
-        container.appendChild(card);
-      });
-    }
-
-    function switchWalletAction(mode) {
-      const recBtn = document.getElementById("subtab-receive");
-      const sendBtn = document.getElementById("subtab-send");
-      const recBox = document.getElementById("wallet-receive-box");
-      const sendBox = document.getElementById("wallet-send-box");
-
-      if (recBtn) recBtn.classList.toggle("active", mode === "receive");
-      if (sendBtn) sendBtn.classList.toggle("active", mode === "send");
-      if (recBox) recBox.style.display = mode === "receive" ? "block" : "none";
-      if (sendBox) sendBox.style.display = mode === "send" ? "block" : "none";
-    }
-
-    function renderTxHistory() {
-      const listEl = document.getElementById("tx-history-list");
-      if (!listEl) return;
-
-      if (!state.txHistory || state.txHistory.length === 0) {
-        listEl.innerHTML = '<div class="tx-item"><span>No crypto or meme transfers yet.</span></div>';
-        return;
-      }
-
-      listEl.innerHTML = "";
-      state.txHistory.slice(0, 6).forEach((tx) => {
-        const row = document.createElement("div");
-        row.className = "tx-item";
-        const left = document.createElement("span");
-        left.textContent = `${tx.type}: ${tx.amount} ${tx.asset}`;
-        const right = document.createElement("span");
-        right.textContent = tx.shortAddr;
-        row.appendChild(left);
-        row.appendChild(right);
-        listEl.appendChild(row);
-      });
-    }
-
-    function renderWalletUI() {
-      const pill = document.getElementById("wallet-pill");
-      const addrDisplay = document.getElementById("wallet-addr-display");
-      const connectBtn = document.getElementById("connect-wallet-btn");
-      const walletStatus = document.getElementById("wallet-status");
-      const receiveAddrText = document.getElementById("receive-addr-text");
-      if (!pill || !addrDisplay || !connectBtn || !walletStatus) return;
-
-      if (state.walletAddress) {
-        pill.textContent = "Connected (TON)";
-        pill.classList.add("connected");
-        addrDisplay.style.display = "block";
-        addrDisplay.textContent = state.walletAddress;
-        connectBtn.textContent = "Disconnect TON";
-        walletStatus.textContent = `Connected TON wallet with ${state.minedTokens} $HG mined.`;
-        if (receiveAddrText) receiveAddrText.textContent = state.walletAddress;
-      } else {
-        pill.textContent = "Disconnected";
-        pill.classList.remove("connected");
-        addrDisplay.style.display = "none";
-        addrDisplay.textContent = "";
-        connectBtn.textContent = "Connect TON Wallet";
-        walletStatus.textContent = `No TON wallet connected (${state.minedTokens} $HG mined).`;
-        if (receiveAddrText) receiveAddrText.textContent = "Connect a TON wallet first";
-      }
-
-      renderTxHistory();
-    }
-
-    async function toggleWalletConnection() {
-      const walletStatus = document.getElementById("wallet-status");
-      if (!tonConnectUI) initTonConnect();
-
-      if (!tonConnectUI) {
-        if (walletStatus) {
-          walletStatus.textContent = "TON Connect is unavailable right now. Please retry.";
-        }
-        return;
-      }
-
-      try {
-        if (tonConnectUI.connected) {
-          await tonConnectUI.disconnect();
-        } else {
-          await tonConnectUI.openModal();
-        }
-      } catch (e) {
-        if (walletStatus) {
-          walletStatus.textContent = "TON wallet connection was cancelled or interrupted.";
-        }
-      }
-    }
-
-    function openConnectedTonExplorer() {
-      const addr = state.walletAddress || "EQCBvSt7DmnRiH5K1M9XfWtvy5Ih4nHPBZyH7R7jg3MFx_Un";
-      openExternalLink(null, `https://tonviewer.com/${encodeURIComponent(addr)}`);
-    }
-
-    function copyReceiveAddress() {
-      const recStatus = document.getElementById("receive-status");
-      if (!state.walletAddress) {
-        if (recStatus) recStatus.textContent = "Connect your TON wallet first to copy your receive address.";
-        return;
-      }
-      copyTextWithFeedback(
-        state.walletAddress,
-        "copy-receive-btn",
-        "receive-status",
-        "Copy Receive Address",
-        "TON receive address copied."
-      );
-    }
-
-    async function handleSendCrypto() {
-      const sendStatus = document.getElementById("send-status");
-      const assetEl = document.getElementById("send-asset-select");
-      const amountEl = document.getElementById("send-amount-input");
-      const recipientEl = document.getElementById("send-recipient-input");
-
-      if (!state.walletAddress) {
-        if (sendStatus) sendStatus.textContent = "Connect your TON wallet first before sending cryptos or memes.";
-        return;
-      }
-
-      const asset = assetEl ? assetEl.value : "TON";
-      const amount = parseFloat(amountEl ? amountEl.value : "");
-      const recipient = (recipientEl ? recipientEl.value : "").trim();
-
-      if (!isValidWalletAddress(recipient)) {
-        if (sendStatus) sendStatus.textContent = "Enter a valid TON address (UQ..., EQ... or raw format).";
-        return;
-      }
-
-      if (!amount || isNaN(amount) || amount <= 0) {
-        if (sendStatus) sendStatus.textContent = "Enter a positive amount to send.";
-        return;
-      }
-
-      const shortAddr = `${recipient.slice(0, 6)}...${recipient.slice(-4)}`;
-
-      if (asset === "TON") {
-        if (!tonConnectUI || !tonConnectUI.connected) {
-          if (sendStatus) sendStatus.textContent = "Connect via TON Connect first to sign a TON transaction.";
-          return;
-        }
-        const nanoTon = Math.round(amount * 1e9).toString();
-        try {
-          if (sendStatus) sendStatus.textContent = "Confirm the TON transaction inside your wallet...";
-          await tonConnectUI.sendTransaction({
-            validUntil: Math.floor(Date.now() / 1000) + 300,
-            messages: [
-              {
-                address: recipient,
-                amount: nanoTon
-              }
-            ]
-          });
-          state.txHistory.unshift({
-            type: "On-chain Sent",
-            asset: "TON",
-            amount,
-            shortAddr,
-            at: Date.now()
-          });
-          saveState();
-          renderWalletsAndReferral();
-          if (amountEl) amountEl.value = "";
-          if (recipientEl) recipientEl.value = "";
-          if (sendStatus) sendStatus.textContent = `TON transaction approved: ${amount} TON to ${shortAddr}.`;
-        } catch (e) {
-          if (sendStatus) sendStatus.textContent = "TON transaction rejected or failed in wallet.";
-        }
-        return;
-      }
-
-      if (asset === "$HG") {
-        if (amount > state.minedTokens) {
-          if (sendStatus) sendStatus.textContent = `Insufficient mined $HG balance (${state.minedTokens} $HG available).`;
-          return;
-        }
-        state.minedTokens = Number((state.minedTokens - amount).toFixed(4));
-      }
-
-      state.txHistory.unshift({
-        type: "Recorded",
-        asset,
-        amount,
-        shortAddr,
-        at: Date.now()
-      });
-
-      saveState();
-      renderWalletsAndReferral();
-      if (amountEl) amountEl.value = "";
-      if (recipientEl) recipientEl.value = "";
-      if (sendStatus) {
-        sendStatus.textContent = `${asset} transfer recorded: ${amount} ${asset} to ${shortAddr}.`;
-      }
-    }
-
-    function renderWalletsAndReferral() {
-      const tb = document.getElementById("task-balance");
-      const mt = document.getElementById("mined-tokens-count");
-      const mb = document.getElementById("mining-balance");
-      const rc = document.getElementById("referral-count");
-      if (tb) tb.textContent = state.taskBalance;
-      if (mt) mt.textContent = state.minedTokens;
-      if (mb) mb.textContent = state.miningBalance;
-      if (rc) rc.textContent = state.referralCount;
-
-      renderWalletUI();
-    }
-
-    function renderState() {
-      syncPendingTasksOnLoad();
-      renderWalletsAndReferral();
-      renderTasks();
-      renderMining();
-      syncReferralStats(false);
-      initTonConnect();
-    }
-
-    function openExternalLink(id, url) {
-      let opened = false;
-      try {
-        if (tg && url.startsWith("https://t.me/") && typeof tg.openTelegramLink === "function") {
-          tg.openTelegramLink(url);
-          opened = true;
-        } else if (tg && typeof tg.openLink === "function") {
-          tg.openLink(url);
-          opened = true;
-        }
-      } catch (e) {
-        opened = false;
-      }
-
-      if (!opened) {
-        window.open(url, "_blank", "noopener,noreferrer");
-      }
-
-      if (id && !state.done[id] && !state.pending[id]) {
-        const status = document.getElementById("status-" + id);
-        if (status) {
-          status.textContent = "Link opened... enabling Claim in 1.5s.";
-        }
-        setTimeout(() => {
-          const btn = document.getElementById("btn-" + id);
-          const currentStatus = document.getElementById("status-" + id);
-          if (btn && !state.done[id] && !state.pending[id]) {
-            btn.disabled = false;
-            if (currentStatus) {
-              currentStatus.textContent = "You can now click Claim.";
-            }
-          }
-        }, 1500);
-      }
-    }
-
-    async function verifyMembership(task) {
-      if (!VERIFY_ENDPOINT || !task.chatUsername) {
-        return { verified: true };
-      }
-      if (!tgUser || !tgUser.id) {
-        return { verified: false, message: "Open inside Telegram to verify HOGS COMMUNITY membership." };
-      }
-
-      const res = await fetch(VERIFY_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          taskId: task.id,
-          chatUsername: task.chatUsername,
-          userId: tgUser.id,
-          initData: tg && tg.initData ? tg.initData : ""
-        })
-      });
-
-      const data = await res.json();
-      if (data && data.isMember === true) {
-        return { verified: true };
-      }
-
-      return {
-        verified: false,
-        message: "You must join HOGS COMMUNITY first to receive the $10 reward."
-      };
-    }
-
-    async function claimTask(id, rewardUsd) {
-      if (state.done[id] || state.pending[id]) return;
-      const task = TASKS.find((t) => t.id === id);
-      if (!task) return;
-
-      const status = document.getElementById("status-" + id);
-      const btn = document.getElementById("btn-" + id);
-      if (btn) btn.disabled = true;
-      if (status) status.textContent = "Checking HOGS COMMUNITY membership...";
-
-      try {
-        const check = await verifyMembership(task);
-        if (!check.verified) {
-          if (btn) btn.disabled = false;
-          if (status) status.textContent = check.message;
-          return;
-        }
-      } catch (e) {
-        if (btn) btn.disabled = false;
-        if (status) status.textContent = "Verification error. Please try again.";
-        return;
-      }
-
-      state.pending[id] = Date.now();
-      saveState();
-      renderTasks();
-      scheduleTaskCompletion(task);
-    }
-
-    function fallbackCopyText(text) {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      let ok = false;
-      try {
-        ok = document.execCommand("copy");
-      } catch (e) {
-        ok = false;
-      }
-      document.body.removeChild(textarea);
-      return ok;
-    }
-
-    function copyTextWithFeedback(text, btnId, statusId, defaultBtnText, copiedMsg) {
-      const btn = document.getElementById(btnId);
-      const status = document.getElementById(statusId);
-      const done = () => {
-        if (btn) btn.textContent = "Copied!";
-        if (status) status.textContent = copiedMsg;
-        setTimeout(() => {
-          if (btn) btn.textContent = defaultBtnText;
-          if (status) status.textContent = "";
-        }, 2000);
-      };
-      const fail = () => {
-        if (status) status.textContent = "Copy blocked by device: please copy manually.";
-      };
-
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        navigator.clipboard.writeText(text).then(done).catch(() => (fallbackCopyText(text) ? done() : fail()));
-      } else if (fallbackCopyText(text)) {
-        done();
-      } else {
-        fail();
-      }
-    }
-
-    function copyContract() {
-      const el = document.getElementById("contract-addr");
-      const addr = el ? el.textContent.trim() : "";
-      if (addr) copyTextWithFeedback(addr, "copy-btn", "copy-status", "Copy Contract", "Address copied to clipboard.");
-    }
-
-    function copyReferralLink() {
-      const el = document.getElementById("referral-link");
-      const link = el ? el.textContent.trim() : "";
-      if (link) copyTextWithFeedback(link, "copy-ref-btn", "ref-copy-status", "Copy Player Link", "Player invite link copied.");
-    }
-
-    try {
-      renderState();
-    } catch (e) {}
-
-    setInterval(() => {
-      try {
-        renderMining();
-        if (Object.keys(state.pending).length > 0) {
-          renderTasks();
-        }
-      } catch (e) {}
-    }, 1000);
+    setInterval(updateMiningTimer, 1000);
+    renderUI();
+    syncReferralOnStart();
+    syncHogsProgress({});
   </script>
 </body>
 </html>
