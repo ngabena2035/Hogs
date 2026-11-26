@@ -516,6 +516,7 @@
           <button id="copy-ref-btn" class="action-btn" type="button" onclick="copyReferralLink()">Copy Player Link</button>
           <button id="refresh-ref-btn" class="action-btn btn-secondary" type="button" onclick="syncReferralStats(true)">Refresh Count</button>
           <div id="ref-copy-status" class="status-msg"></div>
+          <div id="ref-invite-lock-status" class="status-msg">One-time invite rule: an account can only be invited once.</div>
           <div id="ref-sync-status" class="status-msg">Counts players who open @HOGSCOM_BOT through your link.</div>
         </div>
       </div>
@@ -748,7 +749,8 @@
 
     const playerRefCode = getOrCreatePlayerRefCode();
     const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : playerRefCode;
-    const STORAGE_KEY = `hogs_miniapp_state_v13_${userKey}`;
+    const STORAGE_KEY = `hogs_miniapp_state_v14_${userKey}`;
+    const INVITED_LOCK_KEY = `hogs_invited_once_lock_${userKey}`;
 
     const displayUser = tgUser
       ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
@@ -770,6 +772,7 @@
       minedTokens: 0,
       referralCount: 0,
       referredBy: "",
+      inviteLocked: false,
       walletAddress: "",
       txHistory: [],
       miningEndTime: null,
@@ -799,11 +802,22 @@
     if (typeof state.taskBalance !== "number") state.taskBalance = 0;
     if (typeof state.referralCount !== "number") state.referralCount = 0;
 
+    try {
+      const savedLock = localStorage.getItem(INVITED_LOCK_KEY);
+      if (savedLock) {
+        state.inviteLocked = true;
+        if (!state.referredBy) state.referredBy = savedLock;
+      }
+    } catch (e) {}
+
     const taskTimers = {};
 
     function saveState() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (state.inviteLocked && state.referredBy) {
+          localStorage.setItem(INVITED_LOCK_KEY, state.referredBy);
+        }
       } catch (e) {}
     }
 
@@ -813,13 +827,41 @@
       return clean.startsWith("ref_") ? clean : `ref_${clean}`;
     }
 
+    function updateInviteLockUI(extraNotice) {
+      const lockEl = document.getElementById("ref-invite-lock-status");
+      if (!lockEl) return;
+
+      if (extraNotice) {
+        lockEl.textContent = extraNotice;
+        return;
+      }
+
+      if (state.inviteLocked && state.referredBy) {
+        lockEl.textContent = `Invite locked: this account was already invited once (${state.referredBy}). No second invite allowed.`;
+      } else {
+        lockEl.textContent = "One-time invite rule: an account can only be invited once.";
+      }
+    }
+
     async function syncReferralStats(manualClick) {
       const syncEl = document.getElementById("ref-sync-status");
       const incomingRef = normalizeRefCode(startParam);
+      let candidateReferrerToClaim = "";
 
-      if (incomingRef && incomingRef !== playerRefCode && !state.referredBy) {
-        state.referredBy = incomingRef;
-        saveState();
+      if (incomingRef && incomingRef !== playerRefCode) {
+        if (!state.inviteLocked && !state.referredBy) {
+          state.referredBy = incomingRef;
+          state.inviteLocked = true;
+          candidateReferrerToClaim = incomingRef;
+          saveState();
+          updateInviteLockUI();
+        } else if (state.referredBy && state.referredBy !== incomingRef) {
+          updateInviteLockUI(`Second invite ignored: account is already bound to ${state.referredBy}.`);
+        } else {
+          updateInviteLockUI();
+        }
+      } else {
+        updateInviteLockUI();
       }
 
       if (!VERIFY_ENDPOINT) {
@@ -838,7 +880,8 @@
           body: JSON.stringify({
             action: "referral_sync",
             refCode: playerRefCode,
-            referredBy: state.referredBy || "",
+            referredBy: candidateReferrerToClaim || state.referredBy || "",
+            inviteLocked: Boolean(state.inviteLocked),
             userId: tgUser && tgUser.id ? tgUser.id : null,
             initData: tg && tg.initData ? tg.initData : ""
           })
@@ -848,10 +891,17 @@
         const data = await res.json();
         if (data && typeof data.referralCount === "number") {
           state.referralCount = data.referralCount;
+          if (data.lockedReferrer) {
+            state.referredBy = normalizeRefCode(data.lockedReferrer);
+            state.inviteLocked = true;
+          }
           saveState();
           renderWalletsAndReferral();
+          updateInviteLockUI();
           if (syncEl) {
-            syncEl.textContent = `Synced: ${state.referralCount} player(s) joined via your link.`;
+            syncEl.textContent = data.alreadyInvited
+              ? `Synced: ${state.referralCount} invited player(s) (account already counted once).`
+              : `Synced: ${state.referralCount} player(s) joined via your link.`;
           }
         }
       } catch (e) {
