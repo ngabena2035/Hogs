@@ -738,17 +738,15 @@
     const MINING_REWARD_HG = 200;
     const TASK_REWARD_POINTS = 50;
 
-    // Ajoute ici tes nouvelles tâches :
-    // - type: "telegram_chat" -> vérifie l'appartenance via getChatMember (chatUsername requis)
-    // - type: "link_visit" -> exige l'ouverture du lien avant validation (url requis)
+    // Remplace TON_CANAL_ANNONCES par le @username réel de ton canal d'annonces (sans @)
     const EXTRA_TASKS = [
       {
         id: "tg_hogs_announcements",
         title: "Official $HG Announcements Channel",
-        description: "Join the announcements channel and verify membership (+50 Points).",
+        description: "Subscribe to the announcements channel and verify membership (+50 Points).",
         type: "telegram_chat",
-        chatUsername: "COMMUNAUTE_HOGS",
-        url: "https://t.me/COMMUNAUTE_HOGS",
+        chatUsername: "TON_CANAL_ANNONCES",
+        url: "https://t.me/TON_CANAL_ANNONCES",
         rewardPoints: 50
       }
     ];
