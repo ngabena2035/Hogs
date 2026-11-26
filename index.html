@@ -10,7 +10,9 @@
       --bg: #0b0f17;
       --card: #141b29;
       --accent: #f5b700;
-      --accent-soft: rgba(245, 183, 0, 0.14);
+      --accent-soft: rgba(245, 183, 0, 0.16);
+      --ton-blue: #0098ea;
+      --ton-soft: rgba(0, 152, 234, 0.16);
       --text: #f3f6fb;
       --muted: #9aa6bd;
       --ok: #22c55e;
@@ -28,7 +30,7 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 18px 16px 40px;
+      padding: 18px 16px 104px;
     }
 
     .container {
@@ -46,13 +48,6 @@
       padding: 16px;
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
     .title {
       font-size: 1.25rem;
       font-weight: 800;
@@ -63,6 +58,7 @@
       font-size: 0.85rem;
       color: var(--muted);
       margin-top: 4px;
+      line-height: 1.4;
     }
 
     .stats-grid {
@@ -98,17 +94,17 @@
       padding: 8px 0 4px;
     }
 
-    .mine-icon {
-      width: 74px;
-      height: 74px;
+    .ton-circle {
+      width: 96px;
+      height: 96px;
       border-radius: 50%;
-      background: var(--accent-soft);
-      border: 2px solid rgba(245, 183, 0, 0.45);
+      background: var(--ton-soft);
+      border: 3px solid var(--ton-blue);
+      box-shadow: 0 0 24px rgba(0, 152, 234, 0.25);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .mined-total-box {
@@ -126,10 +122,18 @@
     }
 
     .mined-total-value {
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       font-weight: 800;
       color: var(--accent);
       margin-top: 2px;
+    }
+
+    .task-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 10px;
     }
 
     button {
@@ -170,7 +174,7 @@
     .status {
       font-size: 0.85rem;
       color: var(--ok);
-      margin-top: 8px;
+      margin-top: 10px;
       min-height: 20px;
       word-break: break-word;
     }
@@ -185,19 +189,93 @@
       margin-top: 8px;
       word-break: break-all;
     }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    /* Barre des 4 cercles en bas */
+    .bottom-dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(11, 15, 23, 0.96);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      padding: 10px 16px 14px;
+      z-index: 20;
+    }
+
+    .dock-inner {
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .circle-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 0;
+      width: auto;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .circle-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a2234;
+      border: 2px solid rgba(255, 255, 255, 0.14);
+      color: var(--text);
+      font-size: 1.15rem;
+      transition: all 0.2s ease;
+    }
+
+    .circle-btn.ton-main {
+      width: 58px;
+      height: 58px;
+      border-color: var(--ton-blue);
+      background: var(--ton-soft);
+    }
+
+    .circle-tab.active .circle-btn {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #111;
+      box-shadow: 0 0 16px rgba(245, 183, 0, 0.45);
+      transform: translateY(-2px);
+    }
+
+    .circle-tab.active span {
+      color: var(--accent);
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Écran principal : En-tête, Points & Minage 3h -->
+    <!-- En-tête commun -->
     <div class="card">
-      <div class="header">
-        <div>
-          <div class="title">HOGS ($HG)</div>
-          <div class="sub" id="player-greeting">Bienvenue sur la Mini App HOGS</div>
-        </div>
-      </div>
-
+      <div class="title">HOGS ($HG)</div>
+      <div class="sub" id="player-greeting">Bienvenue sur la Mini App HOGS</div>
       <div class="stats-grid">
         <div class="stat-box">
           <div class="stat-label">Points</div>
@@ -207,55 +285,126 @@
           <div class="stat-label">Tâches accomplies</div>
           <div class="stat-value" id="tasks-count">0</div>
         </div>
-        <div class="stat-box">
-          <div class="stat-label">Filleuls validés</div>
+      </div>
+    </div>
+
+    <!-- ÉCRAN 1 (1er cercle gauche) : Tâches -->
+    <section id="screen-tasks" class="screen">
+      <div class="card">
+        <div style="font-weight: 700; font-size: 1.05rem;">Tâches</div>
+        <div class="sub">Complète les tâches communautaires et celles ajoutées pour gagner des Points.</div>
+
+        <div class="task-item">
+          <div style="font-weight: 700;">Communauté officielle Telegram</div>
+          <div class="sub">Rejoins le groupe/canal puis vérifie ton adhésion (+50 Points).</div>
+          <button class="secondary" onclick="openCommunity()">Ouvrir le groupe / canal</button>
+          <button id="verify-task-btn" onclick="verifyCommunityTask()">Vérifier ma tâche (+50 Points)</button>
+        </div>
+
+        <div id="custom-tasks-list"></div>
+      </div>
+    </section>
+
+    <!-- ÉCRAN 2 (2e cercle principal / TON) : Minage -->
+    <section id="screen-mining" class="screen active">
+      <div class="card">
+        <div class="mining-center">
+          <!-- Cercle dessiné au logo TON -->
+          <div class="ton-circle" aria-label="Logo TON">
+            <svg width="46" height="46" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M28 6C15.85 6 6 14.95 6 26C6 33.76 10.94 40.49 18.17 43.82L28 50L37.83 43.82C45.06 40.49 50 33.76 50 26C50 14.95 40.15 6 28 6Z"
+                fill="#0098EA"
+              />
+              <path
+                d="M17.5 20.5H38.5L28 38.5L17.5 20.5Z"
+                stroke="#FFFFFF"
+                stroke-width="3.2"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M28 20.5V38.5"
+                stroke="#FFFFFF"
+                stroke-width="3.2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+
+          <!-- Total miné juste en bas de l'icône de minage -->
+          <div class="mined-total-box">
+            <div class="mined-total-label">Total miné</div>
+            <div class="mined-total-value" id="mined-hg-total">0 $HG</div>
+          </div>
+
+          <div class="sub" id="mine-timer">Cycle de 3h : mine 200 $HG toutes les 3 heures</div>
+          <button id="mine-btn" onclick="claimMining()">Réclamer le minage (+200 $HG)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ÉCRAN 3 (3e cercle) : Parrainage -->
+    <section id="screen-referral" class="screen">
+      <div class="card">
+        <div style="font-weight: 700; font-size: 1.05rem;">Parrainage</div>
+        <div class="sub" id="ref-lock-info">Un compte ne peut être invité qu'une seule fois.</div>
+
+        <div class="stat-box" style="margin-top: 12px;">
+          <div class="stat-label">Personnes parrainées</div>
           <div class="stat-value" id="ref-count">0</div>
         </div>
-        <div class="stat-box">
-          <div class="stat-label">Wallet TON</div>
-          <div class="stat-value" id="wallet-short" style="font-size: 0.88rem;">Non lié</div>
-        </div>
+
+        <div class="ref-link" id="my-ref-link">Chargement du lien...</div>
+        <button class="secondary" onclick="copyRefLink()">Copier mon lien de parrainage</button>
       </div>
+    </section>
 
-      <!-- Zone centrale de minage : Icône -> Total miné en $HG -> Bouton -->
-      <div class="mining-center" style="margin-top: 14px;">
-        <div class="mine-icon" aria-hidden="true">⛏️</div>
+    <!-- ÉCRAN 4 (4e cercle droite) : Wallet & Compte Telegram -->
+    <section id="screen-wallet" class="screen">
+      <div class="card">
+        <div style="font-weight: 700; font-size: 1.05rem;">Wallet & Compte Telegram</div>
+        <div class="sub" id="tg-account-status">Vérification du compte Telegram...</div>
 
-        <div class="mined-total-box">
-          <div class="mined-total-label">Total miné</div>
-          <div class="mined-total-value" id="mined-hg-total">0 $HG</div>
-        </div>
+        <button class="secondary" onclick="openRealTelegramAccount()">
+          Ouvrir / vérifier mon compte Telegram
+        </button>
 
-        <div class="sub" id="mine-timer">Cycle de 3h : mine 200 $HG toutes les 3 heures</div>
-        <button id="mine-btn" onclick="claimMining()">Réclamer le minage (+200 $HG)</button>
+        <div style="margin-top: 14px; font-weight: 700;">Adresse TON pour l'airdrop</div>
+        <div class="sub">Enregistre ton adresse TON (UQ... ou EQ...) liée à ton compte.</div>
+        <input id="wallet-input" type="text" placeholder="Ex. UQ..." />
+        <button onclick="saveWalletAddress()">Enregistrer l'adresse TON</button>
       </div>
-    </div>
+    </section>
 
-    <!-- Tâche communautaire -->
-    <div class="card">
-      <div style="font-weight: 700;">Tâche communautaire</div>
-      <div class="sub">Rejoins la communauté officielle Telegram puis vérifie ton adhésion.</div>
-      <button class="secondary" onclick="openCommunity()">Ouvrir le groupe / canal</button>
-      <button id="verify-task-btn" onclick="verifyCommunityTask()">Vérifier ma tâche (+50 Points)</button>
-    </div>
-
-    <!-- Parrainage -->
-    <div class="card">
-      <div style="font-weight: 700;">Parrainage unique</div>
-      <div class="sub" id="ref-lock-info">Un compte ne peut être invité qu'une seule fois.</div>
-      <div class="ref-link" id="my-ref-link">Chargement du lien...</div>
-      <button class="secondary" onclick="copyRefLink()">Copier mon lien de parrainage</button>
-    </div>
-
-    <!-- Portefeuille TON -->
-    <div class="card">
-      <div style="font-weight: 700;">Adresse TON pour l'airdrop</div>
-      <div class="sub">Enregistre ton adresse TON (UQ... ou EQ...) pour recevoir ta part d'airdrop.</div>
-      <input id="wallet-input" type="text" placeholder="Ex. UQ..." />
-      <button onclick="saveWalletAddress()">Enregistrer l'adresse TON</button>
-      <div class="status" id="status-msg"></div>
+    <div class="card" style="padding: 12px 16px;">
+      <div class="status" id="status-msg" style="margin-top: 0;"></div>
     </div>
   </div>
+
+  <!-- 4 cercles : 1. Tâches | 2. Principal TON (Minage) | 3. Parrainage | 4. Wallet -->
+  <nav class="bottom-dock" aria-label="Navigation principale">
+    <div class="dock-inner">
+      <button id="tab-tasks" class="circle-tab" onclick="switchCircle('tasks')">
+        <div class="circle-btn">✓</div>
+        <span>Tâches</span>
+      </button>
+
+      <button id="tab-mining" class="circle-tab active" onclick="switchCircle('mining')">
+        <div class="circle-btn ton-main">♦</div>
+        <span>Minage</span>
+      </button>
+
+      <button id="tab-referral" class="circle-tab" onclick="switchCircle('referral')">
+        <div class="circle-btn">👥</div>
+        <span>Parrainage</span>
+      </button>
+
+      <button id="tab-wallet" class="circle-tab" onclick="switchCircle('wallet')">
+        <div class="circle-btn">👛</div>
+        <span>Wallet</span>
+      </button>
+    </div>
+  </nav>
 
   <script>
     const HOGS_WORKER_URL = "https://hogs-verify.kevinngabena.workers.dev/";
@@ -264,6 +413,9 @@
     const MINING_COOLDOWN_MS = 3 * 60 * 60 * 1000;
     const MINING_REWARD_HG = 200;
     const TASK_REWARD_POINTS = 50;
+
+    // Tu peux ajouter d'autres tâches ici facilement : { id, title, desc, points, url }
+    const EXTRA_TASKS = [];
 
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
@@ -289,6 +441,7 @@
         userId,
         username: tgUser && tgUser.username ? tgUser.username : "",
         firstName: tgUser && tgUser.first_name ? tgUser.first_name : "Player",
+        isTelegramVerified: Boolean(tgUser && tgUser.id),
         refCode: "ref_" + userId
       };
     }
@@ -305,6 +458,20 @@
       referralCount: Number(localStorage.getItem("hogs_referral_count") || "0")
     };
 
+    function switchCircle(tabName) {
+      const map = {
+        tasks: "screen-tasks",
+        mining: "screen-mining",
+        referral: "screen-referral",
+        wallet: "screen-wallet"
+      };
+
+      Object.keys(map).forEach((key) => {
+        document.getElementById(map[key]).classList.toggle("active", key === tabName);
+        document.getElementById("tab-" + key).classList.toggle("active", key === tabName);
+      });
+    }
+
     function setStatus(msg) {
       document.getElementById("status-msg").textContent = msg;
     }
@@ -319,6 +486,46 @@
       localStorage.setItem("hogs_referral_count", String(state.referralCount));
     }
 
+    function renderExtraTasks() {
+      const container = document.getElementById("custom-tasks-list");
+      container.innerHTML = "";
+
+      EXTRA_TASKS.forEach((task) => {
+        const done = state.completedTasks.includes(task.id);
+        const box = document.createElement("div");
+        box.className = "task-item";
+        box.innerHTML = `
+          <div style="font-weight: 700;">${task.title}</div>
+          <div class="sub">${task.desc} (+${task.points} Points)</div>
+          <button ${done ? "disabled" : ""} onclick="completeExtraTask('${task.id}', ${task.points}, '${task.url || ""}')">
+            ${done ? "Tâche validée" : "Valider la tâche (+" + task.points + " Points)"}
+          </button>
+        `;
+        container.appendChild(box);
+      });
+    }
+
+    async function completeExtraTask(taskId, pts, url) {
+      if (state.completedTasks.includes(taskId)) return;
+      if (url) {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+          window.Telegram.WebApp.openLink(url);
+        } else {
+          window.open(url, "_blank");
+        }
+      }
+      state.completedTasks.push(taskId);
+      state.points += Number(pts || 0);
+      saveLocalState();
+      renderUI();
+      await syncHogsProgress({
+        minedTokens: state.minedTokens,
+        points: state.points,
+        completedTasks: state.completedTasks
+      });
+      setStatus(`Tâche validée ! +${pts} Points ajoutés.`);
+    }
+
     function renderUI() {
       document.getElementById("player-greeting").textContent =
         `Connecté : ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""}`;
@@ -327,21 +534,30 @@
       document.getElementById("tasks-count").textContent = state.completedTasks.length;
       document.getElementById("ref-count").textContent = state.referralCount;
 
-      const walletEl = document.getElementById("wallet-short");
-      if (state.walletAddress) {
-        walletEl.textContent =
-          state.walletAddress.slice(0, 5) + "..." + state.walletAddress.slice(-4);
-        document.getElementById("wallet-input").value = state.walletAddress;
+      const tgStatusEl = document.getElementById("tg-account-status");
+      if (identity.isTelegramVerified) {
+        tgStatusEl.textContent =
+          `Compte Telegram vérifié : ${identity.firstName}${identity.username ? " (@" + identity.username + ")" : ""} — ID ${identity.userId}`;
       } else {
-        walletEl.textContent = "Non lié";
+        tgStatusEl.textContent =
+          "Ouvre l'application directement depuis Telegram pour lier ton vrai compte Telegram.";
       }
 
-      const myRefUrl = `${MINI_APP_URL}?startapp=${encodeURIComponent(identity.refCode)}`;
-      document.getElementById("my-ref-link").textContent = myRefUrl;
+      if (state.walletAddress) {
+        document.getElementById("wallet-input").value = state.walletAddress;
+      }
+
+      // Lien ouvrant directement la Mini App sur Telegram (avec fallback startapp)
+      const directTgAppUrl = `https://t.me/share/url?url=${encodeURIComponent(
+        MINI_APP_URL + "?startapp=" + encodeURIComponent(identity.refCode)
+      )}&text=${encodeURIComponent("Rejoins HOGS ($HG) et mine des $HG toutes les 3h !")}`;
+      document.getElementById("my-ref-link").textContent =
+        `${MINI_APP_URL}?startapp=${encodeURIComponent(identity.refCode)}`;
+      window.__HOGS_SHARE_URL__ = directTgAppUrl;
 
       const lockInfo = document.getElementById("ref-lock-info");
       if (state.referredBy) {
-        lockInfo.textContent = `Invitation verrouillée par : ${state.referredBy}`;
+        lockInfo.textContent = `Invitation verrouillée par : ${state.referredBy} (un seul parrain par compte).`;
       } else {
         lockInfo.textContent = "Un compte ne peut être invité qu'une seule fois.";
       }
@@ -352,7 +568,19 @@
         taskBtn.disabled = true;
       }
 
+      renderExtraTasks();
       updateMiningTimer();
+    }
+
+    function openRealTelegramAccount() {
+      const targetUrl = identity.username
+        ? `https://t.me/${identity.username}`
+        : "https://t.me/";
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(targetUrl);
+      } else {
+        window.open(targetUrl, "_blank");
+      }
     }
 
     function updateMiningTimer() {
@@ -513,7 +741,7 @@
 
       const res = await syncHogsProgress({ walletAddress: state.walletAddress });
       if (res && res.ok) {
-        setStatus("Adresse TON enregistrée pour l'airdrop.");
+        setStatus("Adresse TON enregistrée et liée à ton compte Telegram pour l'airdrop.");
       } else {
         setStatus("Adresse TON sauvegardée localement.");
       }
