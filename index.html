@@ -514,7 +514,9 @@
           <div><strong>Player Invite Link:</strong></div>
           <div id="referral-link" class="contract-text">https://t.me/HOGSCOM_BOT?start=ref_player</div>
           <button id="copy-ref-btn" class="action-btn" type="button" onclick="copyReferralLink()">Copy Player Link</button>
+          <button id="refresh-ref-btn" class="action-btn btn-secondary" type="button" onclick="syncReferralStats(true)">Refresh Count</button>
           <div id="ref-copy-status" class="status-msg"></div>
+          <div id="ref-sync-status" class="status-msg">Counts players who open @HOGSCOM_BOT through your link.</div>
         </div>
       </div>
     </section>
@@ -691,6 +693,9 @@
         if (panel) panel.classList.toggle("active", isSelected);
         if (navBtn) navBtn.classList.toggle("active", isSelected);
       });
+      if (tabName === "referral") {
+        syncReferralStats(false);
+      }
     }
 
     document.querySelectorAll(".nav-btn[data-tab]").forEach((btn) => {
@@ -702,16 +707,26 @@
 
     let tg = null;
     let tgUser = null;
+    let startParam = "";
     try {
       tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
       if (tg) {
         if (typeof tg.ready === "function") tg.ready();
         if (typeof tg.expand === "function") tg.expand();
         tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+        startParam = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? String(tg.initDataUnsafe.start_param) : "";
       }
     } catch (e) {
       tg = null;
       tgUser = null;
+      startParam = "";
+    }
+
+    if (!startParam) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        startParam = urlParams.get("start") || urlParams.get("tgWebAppStartParam") || "";
+      } catch (e) {}
     }
 
     const PLAYER_STORAGE_KEY = "hogs_player_ref_id_v1";
@@ -733,7 +748,7 @@
 
     const playerRefCode = getOrCreatePlayerRefCode();
     const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : playerRefCode;
-    const STORAGE_KEY = `hogs_miniapp_state_v12_${userKey}`;
+    const STORAGE_KEY = `hogs_miniapp_state_v13_${userKey}`;
 
     const displayUser = tgUser
       ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
@@ -754,6 +769,7 @@
       miningBalance: 0,
       minedTokens: 0,
       referralCount: 0,
+      referredBy: "",
       walletAddress: "",
       txHistory: [],
       miningEndTime: null,
@@ -789,6 +805,60 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (e) {}
+    }
+
+    function normalizeRefCode(rawCode) {
+      const clean = String(rawCode || "").trim();
+      if (!clean) return "";
+      return clean.startsWith("ref_") ? clean : `ref_${clean}`;
+    }
+
+    async function syncReferralStats(manualClick) {
+      const syncEl = document.getElementById("ref-sync-status");
+      const incomingRef = normalizeRefCode(startParam);
+
+      if (incomingRef && incomingRef !== playerRefCode && !state.referredBy) {
+        state.referredBy = incomingRef;
+        saveState();
+      }
+
+      if (!VERIFY_ENDPOINT) {
+        if (syncEl) syncEl.textContent = "Local referral counter active.";
+        return;
+      }
+
+      if (manualClick && syncEl) {
+        syncEl.textContent = "Syncing invited players count...";
+      }
+
+      try {
+        const res = await fetch(VERIFY_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "referral_sync",
+            refCode: playerRefCode,
+            referredBy: state.referredBy || "",
+            userId: tgUser && tgUser.id ? tgUser.id : null,
+            initData: tg && tg.initData ? tg.initData : ""
+          })
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && typeof data.referralCount === "number") {
+          state.referralCount = data.referralCount;
+          saveState();
+          renderWalletsAndReferral();
+          if (syncEl) {
+            syncEl.textContent = `Synced: ${state.referralCount} player(s) joined via your link.`;
+          }
+        }
+      } catch (e) {
+        if (manualClick && syncEl) {
+          syncEl.textContent = "Showing saved referral count (offline/check bot webhook).";
+        }
+      }
     }
 
     function isValidWalletAddress(addr) {
@@ -1153,6 +1223,7 @@
       renderWalletsAndReferral();
       renderTasks();
       renderMining();
+      syncReferralStats(false);
     }
 
     function openExternalLink(id, url) {
