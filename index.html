@@ -605,7 +605,7 @@
         <div style="font-weight: 700; font-size: 1.05rem;">Tasks</div>
         <div class="sub">Complete community tasks and added tasks to earn Points.</div>
 
-        <div class="task-item">
+        <div class="task-item" id="community-task-card">
           <div style="font-weight: 700;">Official Telegram Community</div>
           <div class="sub">Join the group/channel and verify your membership (+50 Points).</div>
           <button class="secondary" onclick="openCommunity()">Open Group / Channel</button>
@@ -737,16 +737,17 @@
     const MINING_COOLDOWN_MS = 3 * 60 * 60 * 1000;
     const MINING_REWARD_HG = 200;
     const TASK_REWARD_POINTS = 50;
+    const CERTIFIED_TASK_HIDE_MS = 60 * 1000; // 1 minute APRÈS certification effective
 
-    // Remplace TON_CANAL_ANNONCES par le @username réel de ton canal d'annonces (sans @)
+    // Remplace chatUsername par le @username public du canal (sans @) si disponible, ou garde le lien d'invitation privé dans url
     const EXTRA_TASKS = [
       {
         id: "tg_hogs_announcements",
         title: "Official $HG Announcements Channel",
-        description: "Subscribe to the announcements channel and verify membership (+50 Points).",
+        description: "Join the announcements channel and verify membership (+50 Points). Disappears 1 min after verified join.",
         type: "telegram_chat",
-        chatUsername: "TON_CANAL_ANNONCES",
-        url: "https://t.me/TON_CANAL_ANNONCES",
+        chatUsername: "",
+        url: "https://t.me/+PL7DklN3JYw0OWM0",
         rewardPoints: 50
       }
     ];
@@ -920,6 +921,11 @@
       referralCount: Number(localStorage.getItem("hogs_referral_count") || "0")
     };
 
+    // Enregistre l'instant précis où une tâche a été CERTIFIÉE accomplie
+    let certifiedAtByTaskId = JSON.parse(
+      localStorage.getItem("hogs_certified_task_times") || "{}"
+    );
+
     function saveLocalState() {
       localStorage.setItem("hogs_mined_tokens", String(state.minedTokens));
       localStorage.setItem("hogs_points", String(state.points));
@@ -928,6 +934,29 @@
       localStorage.setItem("hogs_wallet_address", state.walletAddress || "");
       localStorage.setItem("hogs_referred_by", state.referredBy || "");
       localStorage.setItem("hogs_referral_count", String(state.referralCount));
+      localStorage.setItem("hogs_certified_task_times", JSON.stringify(certifiedAtByTaskId));
+    }
+
+    function recordCertifiedCompletion(taskId) {
+      if (!certifiedAtByTaskId[taskId]) {
+        certifiedAtByTaskId[taskId] = Date.now();
+      }
+    }
+
+    function shouldRemoveAfterCertification(taskId) {
+      if (!state.completedTasks.includes(taskId)) return false;
+      const certifiedAt = Number(certifiedAtByTaskId[taskId] || 0);
+      if (!certifiedAt) {
+        return true;
+      }
+      return Date.now() - certifiedAt >= CERTIFIED_TASK_HIDE_MS;
+    }
+
+    function getRemainingHideSeconds(taskId) {
+      const certifiedAt = Number(certifiedAtByTaskId[taskId] || 0);
+      if (!certifiedAt) return 0;
+      const remMs = CERTIFIED_TASK_HIDE_MS - (Date.now() - certifiedAt);
+      return Math.max(0, Math.ceil(remMs / 1000));
     }
 
     function switchCircle(tabName) {
@@ -963,13 +992,21 @@
     }
 
     function renderTasksState() {
+      const mainCard = document.getElementById("community-task-card");
       const mainVerifyBtn = document.getElementById("verify-task-btn");
-      if (mainVerifyBtn) {
-        const done = state.completedTasks.includes("tg_community");
-        mainVerifyBtn.disabled = done;
-        mainVerifyBtn.textContent = done
-          ? "Completed ✓ (+50 Points)"
-          : `Verify Task (+${TASK_REWARD_POINTS} Points)`;
+      if (mainCard) {
+        const hideMain = shouldRemoveAfterCertification("tg_community");
+        mainCard.style.display = hideMain ? "none" : "";
+        if (!hideMain && mainVerifyBtn) {
+          const done = state.completedTasks.includes("tg_community");
+          mainVerifyBtn.disabled = done;
+          if (done) {
+            const rem = getRemainingHideSeconds("tg_community");
+            mainVerifyBtn.textContent = `Verified ✓ (${rem}s before hide)`;
+          } else {
+            mainVerifyBtn.textContent = `Verify Task (+${TASK_REWARD_POINTS} Points)`;
+          }
+        }
       }
 
       const listEl = document.getElementById("custom-tasks-list");
@@ -977,6 +1014,8 @@
 
       listEl.innerHTML = "";
       EXTRA_TASKS.forEach((task) => {
+        if (shouldRemoveAfterCertification(task.id)) return;
+
         const isDone = state.completedTasks.includes(task.id);
         const pts = Number(task.rewardPoints || TASK_REWARD_POINTS);
         const actionLabel = task.type === "telegram_chat" ? "Open Channel / Group" : "Open Task Link";
@@ -999,7 +1038,12 @@
 
         const verifyBtn = document.createElement("button");
         verifyBtn.disabled = isDone;
-        verifyBtn.textContent = isDone ? `Completed ✓ (+${pts} Points)` : `Verify Task (+${pts} Points)`;
+        if (isDone) {
+          const rem = getRemainingHideSeconds(task.id);
+          verifyBtn.textContent = `Verified ✓ (${rem}s before hide)`;
+        } else {
+          verifyBtn.textContent = `Verify Task (+${pts} Points)`;
+        }
         verifyBtn.onclick = () => verifyExtraTask(task.id);
 
         item.appendChild(titleDiv);
@@ -1103,15 +1147,17 @@
       return await res.json();
     }
 
-    async function completeTaskReward(taskId, rewardPoints, successMessage) {
+    // Appelé UNIQUEMENT après certification réelle de la tâche
+    async function finalizeCertifiedTask(taskId, rewardPoints, successMessage) {
       const statusEl = document.getElementById("tasks-status-msg");
       if (state.completedTasks.includes(taskId)) {
-        if (statusEl) statusEl.textContent = "Task already completed.";
+        if (statusEl) statusEl.textContent = "Task already certified.";
         return;
       }
 
       state.completedTasks.push(taskId);
       state.points += rewardPoints;
+      recordCertifiedCompletion(taskId);
       saveLocalState();
       renderUI();
       playRewardAnimation(`+${rewardPoints} PTS`, "points-box");
@@ -1130,18 +1176,18 @@
       try {
         const data = await checkTelegramMembership(COMMUNITY_USERNAME);
         if (!data || !data.ok || !data.isMember) {
-          if (statusEl) statusEl.textContent = "Join the Telegram group/channel first, then verify.";
+          if (statusEl) statusEl.textContent = "Not certified yet: join the Telegram group/channel first.";
           return;
         }
       } catch (err) {
-        if (statusEl) statusEl.textContent = "Verification error. Please try again.";
+        if (statusEl) statusEl.textContent = "Certification check failed. Please try again.";
         return;
       }
 
-      await completeTaskReward(
+      await finalizeCertifiedTask(
         taskId,
         TASK_REWARD_POINTS,
-        `Task verified! +${TASK_REWARD_POINTS} Points.`
+        `Certified! +${TASK_REWARD_POINTS} Points. Disappears in 1 minute.`
       );
     }
 
@@ -1158,27 +1204,34 @@
       const rewardPoints = Number(task.rewardPoints || TASK_REWARD_POINTS);
 
       if (task.type === "telegram_chat") {
+        const cleanChat = String(task.chatUsername || "").replace(/^@/, "").trim();
+        if (!cleanChat) {
+          if (statusEl) {
+            statusEl.textContent = "Channel username is not set for automatic verification yet.";
+          }
+          return;
+        }
         try {
-          const data = await checkTelegramMembership(task.chatUsername);
+          const data = await checkTelegramMembership(cleanChat);
           if (!data || !data.ok || !data.isMember) {
-            if (statusEl) statusEl.textContent = "Join the Telegram channel/group first, then verify.";
+            if (statusEl) statusEl.textContent = "Not certified yet: join the announcements channel first.";
             return;
           }
         } catch (err) {
-          if (statusEl) statusEl.textContent = "Verification error. Please try again.";
+          if (statusEl) statusEl.textContent = "Certification check failed. Please try again.";
           return;
         }
       } else {
         if (task.url && !openedTaskLinks.has(task.id)) {
-          if (statusEl) statusEl.textContent = "Open the task link first, then click Verify.";
+          if (statusEl) statusEl.textContent = "Open the task link first, then verify.";
           return;
         }
       }
 
-      await completeTaskReward(
+      await finalizeCertifiedTask(
         task.id,
         rewardPoints,
-        `${task.title} verified! +${rewardPoints} Points.`
+        `${task.title} certified! +${rewardPoints} Points. Disappears in 1 minute.`
       );
     }
 
@@ -1226,6 +1279,14 @@
             if (typeof data.profile.walletAddress === "string" && data.profile.walletAddress.trim() !== "") {
               if (!state.walletAddress || !extra.walletAddress) {
                 state.walletAddress = data.profile.walletAddress.trim();
+              }
+            }
+            if (Array.isArray(data.profile.completedTasks)) {
+              state.completedTasks = Array.from(
+                new Set([...state.completedTasks, ...data.profile.completedTasks])
+              );
+              if (typeof data.profile.points === "number") {
+                state.points = Math.max(state.points, data.profile.points);
               }
             }
           }
