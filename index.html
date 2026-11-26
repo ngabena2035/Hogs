@@ -216,7 +216,8 @@
       margin-top: 8px;
     }
 
-    .text-input {
+    .text-input,
+    .select-input {
       flex: 1;
       background: #171b24;
       color: #ffffff;
@@ -227,7 +228,8 @@
       outline: none;
     }
 
-    .text-input:focus {
+    .text-input:focus,
+    .select-input:focus {
       border-color: #f59e0b;
     }
 
@@ -249,6 +251,51 @@
       color: #34d399;
       border-color: #10b981;
       background: rgba(16, 185, 129, 0.12);
+    }
+
+    .transfer-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .subtab-btn {
+      background: #171b24;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .subtab-btn.active {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+      border-color: #f59e0b;
+    }
+
+    .tx-list {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .tx-item {
+      background: #171b24;
+      border: 1px solid #2b3245;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 11px;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
     }
 
     .tasks-grid {
@@ -418,7 +465,7 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- 1. TASKS : ENSEMBLE DES TÂCHES -->
+    <!-- 1. TASKS -->
     <section id="panel-tasks" class="tab-panel">
       <div class="card">
         <div class="section-title">All Tasks & Community Session</div>
@@ -430,7 +477,7 @@
       </div>
     </section>
 
-    <!-- 2. CENTRE : COIN & MINING -->
+    <!-- 2. MINING -->
     <section id="panel-mining" class="tab-panel active">
       <div class="card">
         <div id="user-badge" class="user-badge">Member: Guest</div>
@@ -446,7 +493,7 @@
 
         <div class="mining-box">
           <div><strong>Mining Session (every 3 hours)</strong></div>
-          <div class="status-msg">Reward per cycle: <strong>$200</strong></div>
+          <div class="status-msg">Reward per cycle: <strong>$200</strong> + <strong>25 $HG</strong></div>
           <div id="timer-display" class="timer-display">03:00:00</div>
           <button id="mine-btn" class="action-btn" type="button" onclick="handleMiningButton()">Start Mining (3h)</button>
           <div id="mining-status" class="status-msg">Press the button to start a 3-hour mining cycle.</div>
@@ -454,7 +501,7 @@
       </div>
     </section>
 
-    <!-- 3. REFERRAL : INVITÉS & LIEN UNIQUE PAR JOUEUR -->
+    <!-- 3. REFERRAL -->
     <section id="panel-referral" class="tab-panel">
       <div class="card">
         <div class="section-title">Referral & Player Invite Link</div>
@@ -472,10 +519,10 @@
       </div>
     </section>
 
-    <!-- 4. WALLET : PORTEFEUILLE CONNECTÉ & JETONS DÉJÀ MINÉS -->
+    <!-- 4. WALLET (GRAM / CRYPTO & MEMES RECEIVE & SEND) -->
     <section id="panel-crops" class="tab-panel">
       <div class="card">
-        <div class="section-title">Wallet & Mined Tokens</div>
+        <div class="section-title">Gram Wallet — Cryptos & Memes</div>
         <div class="stats-row">
           <div class="stat-box">
             <div>Mined Tokens</div>
@@ -488,7 +535,7 @@
         </div>
 
         <div class="box">
-          <div><strong>Connected Wallet:</strong></div>
+          <div><strong>Gram Wallet Connection:</strong></div>
           <div id="wallet-pill" class="wallet-pill">Disconnected</div>
           <div id="wallet-addr-display" class="contract-text" style="display: none;"></div>
           <div class="input-group">
@@ -496,11 +543,62 @@
               id="wallet-address-input"
               class="text-input"
               type="text"
-              placeholder="Enter TON wallet address (UQ... or EQ...)"
+              placeholder="Paste Gram / TON wallet address (UQ... or EQ...)"
             />
             <button id="connect-wallet-btn" class="action-btn" style="margin-top: 0; margin-right: 0;" type="button" onclick="toggleWalletConnection()">Connect Wallet</button>
           </div>
-          <div id="wallet-status" class="status-msg">Connect your wallet to see your linked address and mined tokens.</div>
+          <div id="wallet-status" class="status-msg">Connect your Gram wallet to receive & send cryptos and memes.</div>
+        </div>
+
+        <div class="box">
+          <div><strong>Receive & Send Cryptos / Memes:</strong></div>
+          <div class="transfer-tabs">
+            <button id="subtab-receive" class="subtab-btn active" type="button" onclick="switchWalletAction('receive')">Receive</button>
+            <button id="subtab-send" class="subtab-btn" type="button" onclick="switchWalletAction('send')">Send</button>
+          </div>
+
+          <div id="wallet-receive-box" style="margin-top: 10px;">
+            <div class="status-msg">Share your Gram wallet address to receive cryptos & memes ($HG, GRAM, TON, MEME):</div>
+            <div id="receive-addr-text" class="contract-text">Connect a Gram wallet first</div>
+            <button id="copy-receive-btn" class="action-btn" type="button" onclick="copyReceiveAddress()">Copy Receive Address</button>
+            <div id="receive-status" class="status-msg"></div>
+          </div>
+
+          <div id="wallet-send-box" style="display: none; margin-top: 10px;">
+            <div class="input-group">
+              <select id="send-asset-select" class="select-input">
+                <option value="$HG">$HG (Meme Token)</option>
+                <option value="GRAM">GRAM</option>
+                <option value="TON">TON</option>
+                <option value="MEME">MEME</option>
+              </select>
+              <input
+                id="send-amount-input"
+                class="text-input"
+                type="number"
+                min="0.01"
+                step="any"
+                placeholder="Amount"
+              />
+            </div>
+            <div class="input-group">
+              <input
+                id="send-recipient-input"
+                class="text-input"
+                type="text"
+                placeholder="Recipient address (UQ... or EQ...)"
+              />
+              <button id="send-crypto-btn" class="action-btn" style="margin-top: 0; margin-right: 0;" type="button" onclick="handleSendCrypto()">Send</button>
+            </div>
+            <div id="send-status" class="status-msg">Select a crypto or meme, enter recipient address and amount.</div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <strong>Recent Activity:</strong>
+            <div id="tx-history-list" class="tx-list">
+              <div class="tx-item"><span>No crypto or meme transfers yet.</span></div>
+            </div>
+          </div>
         </div>
 
         <div class="box">
@@ -635,7 +733,7 @@
 
     const playerRefCode = getOrCreatePlayerRefCode();
     const userKey = tgUser && tgUser.id ? `tg_${tgUser.id}` : playerRefCode;
-    const STORAGE_KEY = `hogs_miniapp_state_v11_${userKey}`;
+    const STORAGE_KEY = `hogs_miniapp_state_v12_${userKey}`;
 
     const displayUser = tgUser
       ? (tgUser.first_name + (tgUser.username ? ` (@${tgUser.username})` : ""))
@@ -657,6 +755,7 @@
       minedTokens: 0,
       referralCount: 0,
       walletAddress: "",
+      txHistory: [],
       miningEndTime: null,
       miningPendingClaim: false
     };
@@ -670,7 +769,8 @@
           ...defaultState,
           ...(parsed && typeof parsed === "object" ? parsed : {}),
           done: parsed && parsed.done && typeof parsed.done === "object" ? parsed.done : {},
-          pending: parsed && parsed.pending && typeof parsed.pending === "object" ? parsed.pending : {}
+          pending: parsed && parsed.pending && typeof parsed.pending === "object" ? parsed.pending : {},
+          txHistory: Array.isArray(parsed && parsed.txHistory) ? parsed.txHistory : []
         };
       } catch (e) {
         return { ...defaultState };
@@ -689,6 +789,10 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (e) {}
+    }
+
+    function isValidWalletAddress(addr) {
+      return /^(UQ|EQ|kQ|0Q)[A-Za-z0-9_-]{46}$/.test(addr.trim());
     }
 
     function formatDuration(ms) {
@@ -714,7 +818,7 @@
           timerEl.textContent = formatDuration(remaining);
           mineBtn.disabled = true;
           mineBtn.textContent = "Mining in progress...";
-          miningStatus.textContent = "Come back in 3 hours to claim $200 and restart.";
+          miningStatus.textContent = "Come back in 3 hours to claim $200 + 25 $HG and restart.";
           return;
         } else {
           state.miningPendingClaim = true;
@@ -727,7 +831,7 @@
         timerEl.textContent = "00:00:00";
         mineBtn.disabled = false;
         mineBtn.textContent = "Claim +$200";
-        miningStatus.textContent = "Cycle complete! Click to claim $200 and restart.";
+        miningStatus.textContent = "Cycle complete! Click to claim $200 + 25 $HG and restart.";
         return;
       }
 
@@ -875,12 +979,48 @@
       });
     }
 
+    function switchWalletAction(mode) {
+      const recBtn = document.getElementById("subtab-receive");
+      const sendBtn = document.getElementById("subtab-send");
+      const recBox = document.getElementById("wallet-receive-box");
+      const sendBox = document.getElementById("wallet-send-box");
+
+      if (recBtn) recBtn.classList.toggle("active", mode === "receive");
+      if (sendBtn) sendBtn.classList.toggle("active", mode === "send");
+      if (recBox) recBox.style.display = mode === "receive" ? "block" : "none";
+      if (sendBox) sendBox.style.display = mode === "send" ? "block" : "none";
+    }
+
+    function renderTxHistory() {
+      const listEl = document.getElementById("tx-history-list");
+      if (!listEl) return;
+
+      if (!state.txHistory || state.txHistory.length === 0) {
+        listEl.innerHTML = '<div class="tx-item"><span>No crypto or meme transfers yet.</span></div>';
+        return;
+      }
+
+      listEl.innerHTML = "";
+      state.txHistory.slice(0, 6).forEach((tx) => {
+        const row = document.createElement("div");
+        row.className = "tx-item";
+        const left = document.createElement("span");
+        left.textContent = `${tx.type}: ${tx.amount} ${tx.asset}`;
+        const right = document.createElement("span");
+        right.textContent = tx.shortAddr;
+        row.appendChild(left);
+        row.appendChild(right);
+        listEl.appendChild(row);
+      });
+    }
+
     function renderWalletUI() {
       const pill = document.getElementById("wallet-pill");
       const addrDisplay = document.getElementById("wallet-addr-display");
       const connectBtn = document.getElementById("connect-wallet-btn");
       const walletInput = document.getElementById("wallet-address-input");
       const walletStatus = document.getElementById("wallet-status");
+      const receiveAddrText = document.getElementById("receive-addr-text");
       if (!pill || !addrDisplay || !connectBtn || !walletInput || !walletStatus) return;
 
       if (state.walletAddress) {
@@ -890,19 +1030,24 @@
         addrDisplay.textContent = state.walletAddress;
         connectBtn.textContent = "Disconnect";
         walletInput.value = state.walletAddress;
-        walletStatus.textContent = `Connected wallet with ${state.minedTokens} $HG mined.`;
+        walletStatus.textContent = `Connected Gram wallet with ${state.minedTokens} $HG mined.`;
+        if (receiveAddrText) receiveAddrText.textContent = state.walletAddress;
       } else {
         pill.textContent = "Disconnected";
         pill.classList.remove("connected");
         addrDisplay.style.display = "none";
         addrDisplay.textContent = "";
         connectBtn.textContent = "Connect Wallet";
-        walletStatus.textContent = `No wallet connected yet (${state.minedTokens} $HG mined).`;
+        walletStatus.textContent = `No Gram wallet connected (${state.minedTokens} $HG mined).`;
+        if (receiveAddrText) receiveAddrText.textContent = "Connect a Gram wallet first";
       }
+
+      renderTxHistory();
     }
 
     function toggleWalletConnection() {
       const input = document.getElementById("wallet-address-input");
+      const walletStatus = document.getElementById("wallet-status");
 
       if (state.walletAddress) {
         state.walletAddress = "";
@@ -912,10 +1057,82 @@
       }
 
       const typedAddr = (input ? input.value : "").trim();
-      const finalAddr = typedAddr || (tgUser && tgUser.id ? `TON_TG_${tgUser.id}` : `TON_${playerRefCode.toUpperCase()}`);
-      state.walletAddress = finalAddr;
+      if (!isValidWalletAddress(typedAddr)) {
+        if (walletStatus) {
+          walletStatus.textContent = "Enter a valid Gram / TON wallet address starting with UQ or EQ (48 chars).";
+        }
+        return;
+      }
+
+      state.walletAddress = typedAddr;
       saveState();
       renderWalletUI();
+    }
+
+    function copyReceiveAddress() {
+      const recStatus = document.getElementById("receive-status");
+      if (!state.walletAddress) {
+        if (recStatus) recStatus.textContent = "Connect your Gram wallet first to copy your receive address.";
+        return;
+      }
+      copyTextWithFeedback(
+        state.walletAddress,
+        "copy-receive-btn",
+        "receive-status",
+        "Copy Receive Address",
+        "Gram receive address copied."
+      );
+    }
+
+    function handleSendCrypto() {
+      const sendStatus = document.getElementById("send-status");
+      const assetEl = document.getElementById("send-asset-select");
+      const amountEl = document.getElementById("send-amount-input");
+      const recipientEl = document.getElementById("send-recipient-input");
+
+      if (!state.walletAddress) {
+        if (sendStatus) sendStatus.textContent = "Connect your Gram wallet first before sending cryptos or memes.";
+        return;
+      }
+
+      const asset = assetEl ? assetEl.value : "$HG";
+      const amount = parseFloat(amountEl ? amountEl.value : "");
+      const recipient = (recipientEl ? recipientEl.value : "").trim();
+
+      if (!isValidWalletAddress(recipient)) {
+        if (sendStatus) sendStatus.textContent = "Enter a valid recipient address (UQ... or EQ...).";
+        return;
+      }
+
+      if (!amount || isNaN(amount) || amount <= 0) {
+        if (sendStatus) sendStatus.textContent = "Enter a positive amount to send.";
+        return;
+      }
+
+      if (asset === "$HG") {
+        if (amount > state.minedTokens) {
+          if (sendStatus) sendStatus.textContent = `Insufficient mined $HG balance (${state.minedTokens} $HG available).`;
+          return;
+        }
+        state.minedTokens = Number((state.minedTokens - amount).toFixed(4));
+      }
+
+      const shortAddr = `${recipient.slice(0, 6)}...${recipient.slice(-4)}`;
+      state.txHistory.unshift({
+        type: "Sent",
+        asset,
+        amount,
+        shortAddr,
+        at: Date.now()
+      });
+
+      saveState();
+      renderWalletsAndReferral();
+      if (amountEl) amountEl.value = "";
+      if (recipientEl) recipientEl.value = "";
+      if (sendStatus) {
+        sendStatus.textContent = `Transfer recorded: ${amount} ${asset} to ${shortAddr}.`;
+      }
     }
 
     function renderWalletsAndReferral() {
