@@ -110,8 +110,8 @@
 
     .hogs-logo-wrap {
       position: relative;
-      width: 126px;
-      height: 126px;
+      width: 132px;
+      height: 132px;
       border-radius: 50%;
       padding: 4px;
       background: linear-gradient(135deg, #ffe07d, #f5b700, #a87400);
@@ -226,7 +226,6 @@
       transition: transform 0.16s ease, box-shadow 0.2s ease, opacity 0.2s ease;
     }
 
-    /* Bouton jaune de minage avec logo animé intégré */
     button.mine-gold-btn {
       display: flex;
       align-items: center;
@@ -527,7 +526,7 @@
       </div>
     </section>
 
-    <!-- SCREEN 2: Mining (Animated Coin Logo + Animated Logo Inside Gold Button) -->
+    <!-- SCREEN 2: Mining (Animated $HOGS Logo in Top Circle + Gold Button) -->
     <section id="screen-mining" class="screen active">
       <div class="card">
         <div class="mining-center">
@@ -535,10 +534,9 @@
 
           <div class="hogs-logo-wrap" id="hogs-mining-logo" aria-label="$HOGS Logo" onclick="claimMining()">
             <img
-              class="hogs-coin-source"
-              src="./hogs-coin.jpg"
-              alt="$HOGS Gold Coin"
-              onerror="if (!this.dataset.fb) { this.dataset.fb = '1'; this.src = 'https://raw.githubusercontent.com/ngabena2035/Hogs/main/hogs-coin.jpg'; }"
+              src="./photo_2026-11-25_17-49-58.jpg"
+              alt="$HOGS Logo"
+              onerror="if (!this.dataset.fb) { this.dataset.fb = '1'; this.src = 'https://raw.githubusercontent.com/ngabena2035/Hogs/main/photo_2026-11-25_17-49-58.jpg'; }"
             />
           </div>
 
@@ -551,10 +549,10 @@
 
           <button id="mine-btn" class="mine-gold-btn" onclick="claimMining()">
             <img
-              class="btn-coin-logo hogs-coin-source"
-              src="./hogs-coin.jpg"
+              class="btn-coin-logo"
+              src="./photo_2026-11-25_17-49-58.jpg"
               alt=""
-              onerror="if (!this.dataset.fb) { this.dataset.fb = '1'; this.src = 'https://raw.githubusercontent.com/ngabena2035/Hogs/main/hogs-coin.jpg'; }"
+              onerror="if (!this.dataset.fb) { this.dataset.fb = '1'; this.src = 'https://raw.githubusercontent.com/ngabena2035/Hogs/main/photo_2026-11-25_17-49-58.jpg'; }"
             />
             <span>Claim Mining (+200 $HG)</span>
           </button>
